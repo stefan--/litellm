@@ -320,11 +320,11 @@ class BedrockConverseLLM(BaseAWSLLM):
             aws_region_name=aws_region_name,
         )
         if (stream is not None and stream is True) and not fake_stream:
-            endpoint_url = f"{endpoint_url}/model/{modelId}/converse-stream"
-            proxy_endpoint_url = f"{proxy_endpoint_url}/model/{modelId}/converse-stream"
+            endpoint_url = f"{endpoint_url}/converse-stream"
+            proxy_endpoint_url = f"{proxy_endpoint_url}/converse-stream"
         else:
-            endpoint_url = f"{endpoint_url}/model/{modelId}/converse"
-            proxy_endpoint_url = f"{proxy_endpoint_url}/model/{modelId}/converse"
+            endpoint_url = f"{endpoint_url}/converse"
+            proxy_endpoint_url = f"{proxy_endpoint_url}/converse"
 
         ## COMPLETION CALL
         headers = {"Content-Type": "application/json"}
