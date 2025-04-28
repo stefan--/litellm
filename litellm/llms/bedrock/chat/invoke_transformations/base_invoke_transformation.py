@@ -102,13 +102,13 @@ class AmazonInvokeConfig(BaseConfig, BaseAWSLLM):
         )
 
         if (stream is not None and stream is True) and provider != "ai21":
-            endpoint_url = f"{endpoint_url}/model/{modelId}/invoke-with-response-stream"
+            endpoint_url = f"{endpoint_url}/invoke-with-response-stream"
             proxy_endpoint_url = (
-                f"{proxy_endpoint_url}/model/{modelId}/invoke-with-response-stream"
+                f"{proxy_endpoint_url}/invoke-with-response-stream"
             )
         else:
-            endpoint_url = f"{endpoint_url}/model/{modelId}/invoke"
-            proxy_endpoint_url = f"{proxy_endpoint_url}/model/{modelId}/invoke"
+            endpoint_url = f"{endpoint_url}/invoke"
+            proxy_endpoint_url = f"{proxy_endpoint_url}/invoke"
 
         return endpoint_url
 
