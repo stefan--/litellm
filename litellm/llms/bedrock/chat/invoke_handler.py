@@ -1490,20 +1490,35 @@ class AWSEventStreamDecoder:
                     _data = json.loads(message)
                     yield self._chunk_parser(chunk_data=_data)
 
-    async def aiter_bytes(
-        self, iterator: AsyncIterator[bytes]
-    ) -> AsyncIterator[Union[GChunk, ModelResponseStream, dict]]:
-        """Given an async iterator that yields lines, iterate over it & yield every event encountered"""
-        from botocore.eventstream import EventStreamBuffer
+    # async def aiter_bytes(
+    #     self, iterator: AsyncIterator[bytes]
+    # ) -> AsyncIterator[Union[GChunk, ModelResponseStream, dict]]:
+    #     """Given an async iterator that yields lines, iterate over it & yield every event encountered"""
+    #     from botocore.eventstream import EventStreamBuffer
 
-        event_stream_buffer = EventStreamBuffer()
-        async for chunk in iterator:
-            event_stream_buffer.add_data(chunk)
-            for event in event_stream_buffer:
-                message = self._parse_message_from_event(event)
-                if message:
+    #     event_stream_buffer = EventStreamBuffer()
+    #     async for chunk in iterator:
+    #         event_stream_buffer.add_data(chunk)
+    #         for event in event_stream_buffer:
+    #             message = self._parse_message_from_event(event)
+    #             if message:
+    #                 _data = json.loads(message)
+    #                 yield self._chunk_parser(chunk_data=_data)
+    
+    async def aiter_bytes(
+        self, iterator: AsyncIterator[dict]
+    ) -> AsyncIterator[Union[GChunk, ModelResponseStream, dict]]:
+        async for event in iterator:
+            chunk = event.get("chunk")
+            if chunk:
+                # Optional: decode, parse, or yield raw
+                message = chunk.decode("utf-8")  # only if needed
+                try:
                     _data = json.loads(message)
                     yield self._chunk_parser(chunk_data=_data)
+                except json.JSONDecodeError:
+                    # If it's not JSON (e.g., partial chunk), skip or buffer
+                    continue
 
     def _parse_message_from_event(self, event) -> Optional[str]:
         response_dict = event.to_response_dict()
