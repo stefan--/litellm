@@ -69,6 +69,8 @@ from litellm.utils import CustomStreamWrapper, get_secret
 from ..base_aws_llm import BaseAWSLLM
 from ..common_utils import BedrockError, ModelResponseIterator, get_bedrock_tool_name
 
+from botocore.eventstream import EventStreamBuffer, ChecksumMismatch
+
 _response_stream_shape_cache = None
 bedrock_tool_name_mappings: InMemoryCache = InMemoryCache(
     max_size_in_memory=50, default_ttl=600
@@ -1506,19 +1508,27 @@ class AWSEventStreamDecoder:
     #                 yield self._chunk_parser(chunk_data=_data)
     
     async def aiter_bytes(
-        self, iterator: AsyncIterator[dict]
+        self, iterator: AsyncIterator[bytes]
     ) -> AsyncIterator[Union[GChunk, ModelResponseStream, dict]]:
-        async for event in iterator:
-            chunk = event.get("chunk")
-            if chunk:
-                # Optional: decode, parse, or yield raw
-                message = chunk.decode("utf-8")  # only if needed
-                try:
-                    _data = json.loads(message)
-                    yield self._chunk_parser(chunk_data=_data)
-                except json.JSONDecodeError:
-                    # If it's not JSON (e.g., partial chunk), skip or buffer
-                    continue
+        buffer = EventStreamBuffer()
+        try:
+            async for chunk in iterator:
+                buffer.add_data(chunk)
+                for event in buffer:
+                    try:
+                        payload = event.payload
+                        if not payload:
+                            continue
+                        message = payload.decode("utf-8")
+                        _data = json.loads(message)
+                        yield self._chunk_parser(chunk_data=_data)
+                    except (UnicodeDecodeError, json.JSONDecodeError):
+                        continue
+        except ChecksumMismatch as e:
+            raise BedrockError(
+                status_code=500,
+                message=f"Checksum mismatch error: {str(e)}.",
+            )
 
     def _parse_message_from_event(self, event) -> Optional[str]:
         response_dict = event.to_response_dict()
