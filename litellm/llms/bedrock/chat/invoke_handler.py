@@ -1492,43 +1492,29 @@ class AWSEventStreamDecoder:
                     _data = json.loads(message)
                     yield self._chunk_parser(chunk_data=_data)
 
-    # async def aiter_bytes(
-    #     self, iterator: AsyncIterator[bytes]
-    # ) -> AsyncIterator[Union[GChunk, ModelResponseStream, dict]]:
-    #     """Given an async iterator that yields lines, iterate over it & yield every event encountered"""
-    #     from botocore.eventstream import EventStreamBuffer
 
-    #     event_stream_buffer = EventStreamBuffer()
-    #     async for chunk in iterator:
-    #         event_stream_buffer.add_data(chunk)
-    #         for event in event_stream_buffer:
-    #             message = self._parse_message_from_event(event)
-    #             if message:
-    #                 _data = json.loads(message)
-    #                 yield self._chunk_parser(chunk_data=_data)
-    
     async def aiter_bytes(
         self, iterator: AsyncIterator[bytes]
     ) -> AsyncIterator[Union[GChunk, ModelResponseStream, dict]]:
-        buffer = EventStreamBuffer()
-        try:
-            async for chunk in iterator:
-                buffer.add_data(chunk)
-                for event in buffer:
-                    try:
-                        payload = event.payload
-                        if not payload:
-                            continue
-                        message = payload.decode("utf-8")
+        """Given an async iterator that yields lines, iterate over it & yield every event encountered"""
+        
+        from botocore.eventstream import EventStreamBuffer
+
+        event_stream_buffer = EventStreamBuffer()
+        async for chunk in iterator:
+            try:
+                event_stream_buffer.add_data(chunk)
+                for event in event_stream_buffer:
+                    message = self._parse_message_from_event(event)
+                    if message:
                         _data = json.loads(message)
                         yield self._chunk_parser(chunk_data=_data)
-                    except (UnicodeDecodeError, json.JSONDecodeError):
-                        continue
-        except ChecksumMismatch as e:
-            raise BedrockError(
-                status_code=500,
-                message=f"Checksum mismatch error: {str(e)}.",
-            )
+            except (ChecksumMismatch, Exception) as e:
+                print("Received chunk in async iterator: ", chunk)
+                message = self._parse_message_from_event(chunk)
+                if message:
+                    _data = json.loads(message)
+                    yield self._chunk_parser(chunk_data=_data)
 
     def _parse_message_from_event(self, event) -> Optional[str]:
         response_dict = event.to_response_dict()
