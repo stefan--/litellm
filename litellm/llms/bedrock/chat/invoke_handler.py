@@ -1519,6 +1519,7 @@ class AWSEventStreamDecoder:
                         _data = json.loads(event)
                         yield self._chunk_parser(chunk_data=_data)
                     except json.JSONDecodeError:
+                        print(f"Failed to decode JSON from event: {event}")
                         continue
 
     def _parse_message_from_event(self, event) -> Optional[str]:
