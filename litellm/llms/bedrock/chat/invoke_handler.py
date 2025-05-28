@@ -2,6 +2,7 @@
 TODO: DELETE FILE. Bedrock LLM is no longer used. Goto `litellm/llms/bedrock/chat/invoke_transformations/base_invoke_transformation.py`
 """
 
+import ast
 import copy
 import json
 import time
@@ -1515,11 +1516,13 @@ class AWSEventStreamDecoder:
                     event = event.strip()
                     if not event:
                         continue
+                    if event.startswith("data: "):
+                        event = event[len("data: "):].strip()
                     try:
-                        _data = json.loads(event)
+                        _data = ast.literal_eval(event)
                         yield self._chunk_parser(chunk_data=_data)
-                    except json.JSONDecodeError:
-                        print(f"Failed to decode JSON from event: {event}")
+                    except Exception as e:
+                        print(f"Failed to parse event as Python dict: {event}\nError: {e}")
                         continue
 
     def _parse_message_from_event(self, event) -> Optional[str]:
