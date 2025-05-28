@@ -1511,10 +1511,8 @@ class AWSEventStreamDecoder:
                         yield self._chunk_parser(chunk_data=_data)
             except (ChecksumMismatch, Exception) as e:
                 print("Received chunk in async iterator: ", chunk)
-                message = self._parse_message_from_event(chunk)
-                if message:
-                    _data = json.loads(message)
-                    yield self._chunk_parser(chunk_data=_data)
+                _data = json.loads(chunk)
+                yield self._chunk_parser(chunk_data=_data)
 
     def _parse_message_from_event(self, event) -> Optional[str]:
         response_dict = event.to_response_dict()
