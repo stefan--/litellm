@@ -1512,8 +1512,14 @@ class AWSEventStreamDecoder:
             except (ChecksumMismatch, Exception) as e:
                 events = chunk.decode('utf-8').split('\n\n')
                 for event in events:
-                    _data = json.loads(event)
-                    yield self._chunk_parser(chunk_data=_data)
+                    event = event.strip()
+                    if not event:
+                        continue
+                    try:
+                        _data = json.loads(event)
+                        yield self._chunk_parser(chunk_data=_data)
+                    except json.JSONDecodeError:
+                        continue
 
     def _parse_message_from_event(self, event) -> Optional[str]:
         response_dict = event.to_response_dict()
