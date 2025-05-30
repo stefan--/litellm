@@ -8,6 +8,7 @@ import json
 import time
 import types
 import urllib.parse
+import re
 import uuid
 from functools import partial
 from typing import (
@@ -1228,6 +1229,12 @@ class AWSEventStreamDecoder:
         self.model = model
         self.parser = EventStreamJSONParser()
         self.content_blocks: List[ContentBlockDeltaEvent] = []
+        
+        self.buffer = ""
+        self.bracket_stack = []
+        self.in_string = False
+        self.string_char = None
+        self.escaped = False
 
     def check_empty_tool_call_args(self) -> bool:
         """
@@ -1493,7 +1500,6 @@ class AWSEventStreamDecoder:
                     _data = json.loads(message)
                     yield self._chunk_parser(chunk_data=_data)
 
-
     async def aiter_bytes(
         self, iterator: AsyncIterator[bytes]
     ) -> AsyncIterator[Union[GChunk, ModelResponseStream, dict]]:
@@ -1511,19 +1517,227 @@ class AWSEventStreamDecoder:
                         _data = json.loads(message)
                         yield self._chunk_parser(chunk_data=_data)
             except (ChecksumMismatch, Exception) as e:
-                events = chunk.decode('utf-8').split('\n\n')
-                for event in events:
-                    event = event.strip()
-                    if not event:
-                        continue
-                    if event.startswith("data: "):
-                        event = event[len("data: "):].strip()
+                # Handle fallback parsing with buffering
+                await self._process_chunk_with_buffering(chunk)
+                
+                # Yield any complete structures we've parsed
+                while True:
+                    parsed_data = self._try_parse_complete_structure()
+                    if parsed_data is None:
+                        break
                     try:
-                        _data = ast.literal_eval(event)
-                        yield self._chunk_parser(chunk_data=_data)
-                    except Exception as e:
-                        print(f"Failed to parse event as Python dict: {event}\nError: {e}")
+                        yield self._chunk_parser(chunk_data=parsed_data)
+                    except Exception as chunk_error:
+                        print(f"Failed to process chunk: {chunk_error}")
                         continue
+
+    async def _process_chunk_with_buffering(self, chunk: bytes):
+        """Process a chunk and add to buffer, handling partial structures"""
+        try:
+            chunk_str = chunk.decode('utf-8')
+        except UnicodeDecodeError:
+            print("Failed to decode chunk as UTF-8")
+            return
+        
+        # Split by double newlines (common event separator)
+        events = chunk_str.split('\n\n')
+        
+        for i, event in enumerate(events):
+            event = event.strip()
+            if not event:
+                continue
+            
+            # Remove "data: " prefix if present
+            if event.startswith("data: "):
+                event = event[len("data: "):].strip()
+            
+            # If this is the last event and we have more events, it might be incomplete
+            if i == len(events) - 1 and len(events) > 1:
+                self.buffer += event
+            else:
+                # Try to parse this event, or add to buffer if incomplete
+                self._add_to_buffer(event)
+
+    def _add_to_buffer(self, event_str: str):
+        """Add event string to buffer and track structure completeness"""
+        self.buffer += event_str
+        
+    def _try_parse_complete_structure(self) -> Optional[dict]:
+        """Try to parse a complete structure from the buffer"""
+        if not self.buffer.strip():
+            return None
+        
+        # Find potential complete structures in the buffer
+        complete_structure = self._extract_complete_structure()
+        if complete_structure is None:
+            return None
+        
+        # Try to parse the complete structure
+        parsed = self._parse_structure(complete_structure)
+        if parsed is not None:
+            # Remove the parsed structure from buffer
+            self._remove_from_buffer(complete_structure)
+            return parsed
+        
+        return None
+    
+    def _extract_complete_structure(self) -> Optional[str]:
+        """Extract a complete JSON/dict structure from the buffer"""
+        buffer = self.buffer.strip()
+        if not buffer:
+            return None
+        
+        # Try to find complete structures
+        for start_char, end_char in ['{', '}'], ['[', ']']:
+            structure = self._find_balanced_structure(buffer, start_char, end_char)
+            if structure:
+                return structure
+        
+        return None
+    
+    def _find_balanced_structure(self, text: str, start_char: str, end_char: str) -> Optional[str]:
+        """Find a balanced structure (e.g., matching braces)"""
+        start_idx = text.find(start_char)
+        if start_idx == -1:
+            return None
+        
+        stack = []
+        in_string = False
+        string_char = None
+        escaped = False
+        
+        for i in range(start_idx, len(text)):
+            char = text[i]
+            
+            if escaped:
+                escaped = False
+                continue
+            
+            if char == '\\':
+                escaped = True
+                continue
+            
+            if not in_string:
+                if char in ['"', "'"]:
+                    in_string = True
+                    string_char = char
+                elif char == start_char:
+                    stack.append(char)
+                elif char == end_char:
+                    if stack:
+                        stack.pop()
+                        if not stack:
+                            # Found complete structure
+                            return text[start_idx:i+1]
+            else:
+                if char == string_char:
+                    in_string = False
+                    string_char = None
+        
+        return None
+    
+    def _parse_structure(self, structure_str: str) -> Optional[dict]:
+        """Parse a structure string using multiple strategies"""
+        if not structure_str.strip():
+            return None
+        
+        # Strategy 1: Detect format and use appropriate parser
+        format_type = self._detect_format(structure_str)
+        
+        if format_type == 'json':
+            return self._parse_json(structure_str)
+        elif format_type == 'python_dict':
+            return self._parse_python_dict(structure_str)
+        else:
+            # Try both parsers
+            result = self._parse_json(structure_str)
+            if result is None:
+                result = self._parse_python_dict(structure_str)
+            return result
+    
+    def _detect_format(self, structure_str: str) -> str:
+        """Detect if structure is JSON or Python dict format"""
+        # Remove whitespace for analysis
+        clean_str = structure_str.strip()
+        
+        # Count quote types
+        double_quotes = clean_str.count('"')
+        single_quotes = clean_str.count("'")
+        
+        # JSON typically uses double quotes for strings
+        # Python dicts often use single quotes
+        if double_quotes > single_quotes * 2:
+            return 'json'
+        elif single_quotes > double_quotes * 2:
+            return 'python_dict'
+        
+        # Look for other indicators
+        if re.search(r':\s*"[^"]*"', clean_str):  # JSON-style string values
+            return 'json'
+        elif re.search(r":\s*'[^']*'", clean_str):  # Python-style string values
+            return 'python_dict'
+        
+        return 'unknown'
+    
+    def _parse_json(self, structure_str: str) -> Optional[dict]:
+        """Parse JSON format"""
+        try:
+            return json.loads(structure_str)
+        except json.JSONDecodeError as e:
+            # Try to fix common JSON issues
+            try:
+                # Fix unescaped quotes and other common issues
+                fixed = self._fix_json_issues(structure_str)
+                return json.loads(fixed)
+            except json.JSONDecodeError:
+                return None
+    
+    def _parse_python_dict(self, structure_str: str) -> Optional[dict]:
+        """Parse Python dict format"""
+        try:
+            return ast.literal_eval(structure_str)
+        except (ValueError, SyntaxError):
+            # Try to fix common Python dict issues
+            try:
+                fixed = self._fix_python_dict_issues(structure_str)
+                return ast.literal_eval(fixed)
+            except (ValueError, SyntaxError):
+                return None
+    
+    def _fix_json_issues(self, json_str: str) -> str:
+        """Fix common JSON formatting issues"""
+        # Replace single quotes with double quotes (but be careful about contractions)
+        # This is a simplified approach - more sophisticated parsing might be needed
+        fixed = json_str.replace("'", '"')
+        
+        # Handle other common issues
+        fixed = re.sub(r'([{,]\s*)(\w+):', r'\1"\2":', fixed)  # Unquoted keys
+        
+        return fixed
+    
+    def _fix_python_dict_issues(self, dict_str: str) -> str:
+        """Fix common Python dict formatting issues"""
+        # Handle incomplete strings
+        if dict_str.count('"') % 2 != 0:
+            dict_str += '"'
+        if dict_str.count("'") % 2 != 0:
+            dict_str += "'"
+        
+        # Handle incomplete structures
+        open_braces = dict_str.count('{')
+        close_braces = dict_str.count('}')
+        if open_braces > close_braces:
+            dict_str += '}' * (open_braces - close_braces)
+        
+        return dict_str
+    
+    def _remove_from_buffer(self, parsed_structure: str):
+        """Remove parsed structure from buffer"""
+        # Find the structure in buffer and remove it
+        idx = self.buffer.find(parsed_structure)
+        if idx != -1:
+            self.buffer = self.buffer[:idx] + self.buffer[idx + len(parsed_structure):]
+            self.buffer = self.buffer.strip()
 
     def _parse_message_from_event(self, event) -> Optional[str]:
         response_dict = event.to_response_dict()
