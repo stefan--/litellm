@@ -13,7 +13,6 @@ from typing import Any, Dict, List, Optional, cast
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
-from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import CallToolResult
 from mcp.types import Tool as MCPTool
 
@@ -183,6 +182,7 @@ class MCPServerManager:
                     return tools_result.tools
         elif server.transport == MCPTransport.http:
 <<<<<<< HEAD
+<<<<<<< HEAD
             if streamablehttp_client is None:
                 verbose_logger.error(
                     "streamablehttp_client not available - install mcp with HTTP support"
@@ -190,6 +190,10 @@ class MCPServerManager:
                 raise ValueError(
                     "streamablehttp_client not available - please run `pip install mcp -U`"
                 )
+=======
+            from mcp.client.streamable_http import streamablehttp_client
+
+>>>>>>> 173f7d9d3 (fix import streamablehttp_client)
             verbose_logger.debug(f"Using HTTP streamable transport for {server.url}")
             async with streamablehttp_client(
                 url=server.url,
@@ -270,6 +274,7 @@ class MCPServerManager:
                     return await session.call_tool(name, arguments)
         elif mcp_server.transport == MCPTransport.http:
 <<<<<<< HEAD
+<<<<<<< HEAD
             if streamablehttp_client is None:
                 verbose_logger.error(
                     "streamablehttp_client not available - install mcp with HTTP support"
@@ -279,6 +284,10 @@ class MCPServerManager:
                 )
 =======
 >>>>>>> 88cfcc305 (feat - add https mcp support)
+=======
+            from mcp.client.streamable_http import streamablehttp_client
+
+>>>>>>> 173f7d9d3 (fix import streamablehttp_client)
             verbose_logger.debug(
                 f"Using HTTP streamable transport for tool call: {name}"
             )
