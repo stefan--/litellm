@@ -30,10 +30,14 @@ try:
     from mcp.client.streamable_http import streamablehttp_client
 except ImportError:
 <<<<<<< HEAD
+<<<<<<< HEAD
     streamablehttp_client = None  # type: ignore
 =======
     streamablehttp_client = None
 >>>>>>> 689a3807f (fix streamablehttp_client)
+=======
+    streamablehttp_client = None  # type: ignore
+>>>>>>> 2b8a3ab00 (add streamablehttp_client)
 
 from litellm.types.mcp_server.mcp_server_manager import MCPInfo, MCPServer
 
