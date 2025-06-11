@@ -207,10 +207,14 @@ class MCPServerManager:
                     await session.initialize()
 
 <<<<<<< HEAD
+<<<<<<< HEAD
                     if get_session_id is not None:
 =======
                     if get_session_id:
 >>>>>>> 88cfcc305 (feat - add https mcp support)
+=======
+                    if get_session_id is not None:
+>>>>>>> 9f74c34cf (fix linting error)
                         session_id = get_session_id()
                         if session_id:
                             verbose_logger.debug(f"HTTP session ID: {session_id}")
@@ -292,10 +296,14 @@ class MCPServerManager:
                     await session.initialize()
 
 <<<<<<< HEAD
+<<<<<<< HEAD
                     if get_session_id is not None:
 =======
                     if get_session_id:
 >>>>>>> 88cfcc305 (feat - add https mcp support)
+=======
+                    if get_session_id is not None:
+>>>>>>> 9f74c34cf (fix linting error)
                         session_id = get_session_id()
                         if session_id:
                             verbose_logger.debug(
