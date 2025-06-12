@@ -492,6 +492,7 @@ else:
     app.mount("/", handle_streamable_http_mcp)
     app.mount("/sse", handle_sse_mcp)
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     if __name__ == "__main__":
         # Configure logging
@@ -502,3 +503,8 @@ else:
 >>>>>>> 34415bed7 (working mounted app)
 =======
 >>>>>>> b643bcce9 (fix - init just as fastapi app)
+=======
+
+else:
+    app = FastAPI()
+>>>>>>> ba0936fff (fix importing / init litellm app)
