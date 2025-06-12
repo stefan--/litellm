@@ -48,6 +48,10 @@ except ImportError as e:
 _SESSION_MANAGERS_INITIALIZED = False
 _SESSION_MANAGER_TASK = None
 
+# Global variables to track initialization
+_SESSION_MANAGERS_INITIALIZED = False
+_SESSION_MANAGER_TASK = None
+
 if MCP_AVAILABLE:
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -117,6 +121,9 @@ if MCP_AVAILABLE:
     )
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 1973af191 (working HTTPS mcp streamable)
     async def initialize_session_managers():
         """Initialize the session managers. Can be called from main app lifespan."""
         global _SESSION_MANAGERS_INITIALIZED, _SESSION_MANAGER_TASK
@@ -147,7 +154,11 @@ if MCP_AVAILABLE:
 
     async def shutdown_session_managers():
         """Shutdown the session managers."""
+<<<<<<< HEAD
         global _SESSION_MANAGERS_INITIALIZED, _SESSION_MANAGER_TASK
+=======
+        global _session_managers_initialized, _session_manager_task
+>>>>>>> 1973af191 (working HTTPS mcp streamable)
 
         if _SESSION_MANAGER_TASK and not _SESSION_MANAGER_TASK.done():
             verbose_logger.info("Shutting down MCP session managers...")
@@ -157,6 +168,7 @@ if MCP_AVAILABLE:
             except asyncio.CancelledError:
                 pass
 
+<<<<<<< HEAD
         _SESSION_MANAGERS_INITIALIZED = False
         _SESSION_MANAGER_TASK = None
 
@@ -182,6 +194,19 @@ if MCP_AVAILABLE:
                 finally:
                     verbose_logger.info("MCP Server shutting down...")
 >>>>>>> 5b12f3f0b (add simple https server)
+=======
+        _session_managers_initialized = False
+        _session_manager_task = None
+
+    @contextlib.asynccontextmanager
+    async def lifespan(app) -> AsyncIterator[None]:
+        """Application lifespan context manager."""
+        await initialize_session_managers()
+        try:
+            yield
+        finally:
+            await shutdown_session_managers()
+>>>>>>> 1973af191 (working HTTPS mcp streamable)
 
     ########################################################
     ############### MCP Server Routes #######################
@@ -348,12 +373,36 @@ if MCP_AVAILABLE:
         scope: Scope, receive: Receive, send: Send
     ) -> None:
         """Handle MCP requests through StreamableHTTP."""
-        await session_manager.handle_request(scope, receive, send)
+        try:
+            # Ensure session managers are initialized
+            if not _SESSION_MANAGERS_INITIALIZED:
+                await initialize_session_managers()
+                # Give it a moment to start up
+                await asyncio.sleep(0.1)
+
+            await session_manager.handle_request(scope, receive, send)
+        except Exception as e:
+            verbose_logger.exception(f"Error handling MCP request: {e}")
+            raise e
 
     async def handle_sse_mcp(scope: Scope, receive: Receive, send: Send) -> None:
         """Handle MCP requests through SSE."""
+<<<<<<< HEAD
         await sse_session_manager.handle_request(scope, receive, send)
 >>>>>>> 5b12f3f0b (add simple https server)
+=======
+        try:
+            # Ensure session managers are initialized
+            if not _session_managers_initialized:
+                await initialize_session_managers()
+                # Give it a moment to start up
+                await asyncio.sleep(0.1)
+
+            await sse_session_manager.handle_request(scope, receive, send)
+        except Exception as e:
+            verbose_logger.exception(f"Error handling MCP request: {e}")
+            raise e
+>>>>>>> 1973af191 (working HTTPS mcp streamable)
 
     async def handle_sse_mcp(scope: Scope, receive: Receive, send: Send) -> None:
         """Handle MCP requests through SSE."""
@@ -426,7 +475,7 @@ else:
     app.include_router(router)
 
     # Mount the MCP handlers
-    app.mount("/mcp", handle_streamable_http_mcp)
+    app.mount("/", handle_streamable_http_mcp)
     app.mount("/sse", handle_sse_mcp)
 
     if __name__ == "__main__":
