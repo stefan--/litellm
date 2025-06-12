@@ -188,6 +188,7 @@ if MCP_AVAILABLE:
                 pass
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         _SESSION_MANAGERS_INITIALIZED = False
         _SESSION_MANAGER_TASK = None
 
@@ -216,6 +217,10 @@ if MCP_AVAILABLE:
 =======
         _session_managers_initialized = False
         _session_manager_task = None
+=======
+        _SESSION_MANAGERS_INITIALIZED = False
+        _SESSION_MANAGER_TASK = None
+>>>>>>> d107fb336 (Update server.py)
 
     @contextlib.asynccontextmanager
     async def lifespan(app) -> AsyncIterator[None]:
