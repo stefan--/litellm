@@ -170,10 +170,14 @@ if MCP_AVAILABLE:
     async def shutdown_session_managers():
         """Shutdown the session managers."""
 <<<<<<< HEAD
+<<<<<<< HEAD
         global _SESSION_MANAGERS_INITIALIZED, _SESSION_MANAGER_TASK
 =======
         global _session_managers_initialized, _session_manager_task
 >>>>>>> 1973af191 (working HTTPS mcp streamable)
+=======
+        global _SESSION_MANAGERS_INITIALIZED, _session_manager_task
+>>>>>>> 0863c8766 (Update litellm/proxy/_experimental/mcp_server/server.py)
 
         if _SESSION_MANAGER_TASK and not _SESSION_MANAGER_TASK.done():
             verbose_logger.info("Shutting down MCP session managers...")
