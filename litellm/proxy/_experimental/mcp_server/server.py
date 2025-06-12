@@ -171,6 +171,7 @@ if MCP_AVAILABLE:
         """Shutdown the session managers."""
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         global _SESSION_MANAGERS_INITIALIZED, _SESSION_MANAGER_TASK
 =======
         global _session_managers_initialized, _session_manager_task
@@ -178,6 +179,9 @@ if MCP_AVAILABLE:
 =======
         global _SESSION_MANAGERS_INITIALIZED, _session_manager_task
 >>>>>>> 0863c8766 (Update litellm/proxy/_experimental/mcp_server/server.py)
+=======
+        global _SESSION_MANAGERS_INITIALIZED, _SESSION_MANAGER_TASK
+>>>>>>> 9dfc7fff2 (fixes based on review + code check)
 
         if _SESSION_MANAGER_TASK and not _SESSION_MANAGER_TASK.done():
             verbose_logger.info("Shutting down MCP session managers...")
@@ -372,6 +376,7 @@ if MCP_AVAILABLE:
             return [MCPTextContent(text=f"Error: {str(e)}", type="text")]
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     async def handle_streamable_http_mcp(
         scope: Scope, receive: Receive, send: Send
     ) -> None:
@@ -393,6 +398,8 @@ if MCP_AVAILABLE:
         """Health check endpoint."""
         return JSONResponse({"status": "healthy", "message": "MCP Server is running"})
 
+=======
+>>>>>>> 9dfc7fff2 (fixes based on review + code check)
     async def handle_streamable_http_mcp(
         scope: Scope, receive: Receive, send: Send
     ) -> None:
