@@ -22,7 +22,6 @@ from starlette.applications import Starlette
 >>>>>>> 34415bed7 (working mounted app)
 =======
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import JSONResponse
 from pydantic import ConfigDict
 >>>>>>> 91464073e (fix code QA check)
 from starlette.types import Receive, Scope, Send
