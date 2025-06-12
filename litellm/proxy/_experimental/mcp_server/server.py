@@ -38,6 +38,10 @@ LITELLM_MCP_SERVER_NAME = "litellm-mcp-server"
 LITELLM_MCP_SERVER_VERSION = "1.0.0"
 LITELLM_MCP_SERVER_DESCRIPTION = "MCP Server for LiteLLM"
 
+LITELLM_MCP_SERVER_NAME = "litellm-mcp-server"
+LITELLM_MCP_SERVER_VERSION = "1.0.0"
+LITELLM_MCP_SERVER_DESCRIPTION = "MCP Server for LiteLLM"
+
 # Check if MCP is available
 # "mcp" requires python 3.10 or higher, but several litellm users use python 3.8
 # We're making this conditional import to avoid breaking users who use python 3.8.
@@ -101,12 +105,17 @@ if MCP_AVAILABLE:
     ########################################################
     server: Server = Server(
 <<<<<<< HEAD
+<<<<<<< HEAD
         name=LITELLM_MCP_SERVER_NAME,
         version=LITELLM_MCP_SERVER_VERSION,
 =======
         name="litellm-mcp-server",
         version="1.0.0",
 >>>>>>> 5b12f3f0b (add simple https server)
+=======
+        name=LITELLM_MCP_SERVER_NAME,
+        version=LITELLM_MCP_SERVER_VERSION,
+>>>>>>> 8eed1c84d (add LITELLM_MCP_SERVER_DESCRIPTION)
     )
     sse: SseServerTransport = SseServerTransport("/mcp/sse/messages")
 
@@ -470,9 +479,9 @@ else:
         return await call_mcp_tool(**data)
 
     app = FastAPI(
-        title="LiteLLM MCP Server",
-        description="MCP Server for LiteLLM",
-        version="1.0.0",
+        title=LITELLM_MCP_SERVER_NAME,
+        description=LITELLM_MCP_SERVER_DESCRIPTION,
+        version=LITELLM_MCP_SERVER_VERSION,
         lifespan=lifespan,
     )
 
