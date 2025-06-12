@@ -11,11 +11,14 @@ from fastapi import FastAPI, HTTPException
 from pydantic import ConfigDict
 =======
 from anyio import BrokenResourceError
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import ConfigDict, ValidationError
+<<<<<<< HEAD
 from starlette.applications import Starlette
 >>>>>>> 5b12f3f0b (add simple https server)
+=======
+>>>>>>> 34415bed7 (working mounted app)
 from starlette.types import Receive, Scope, Send
 
 from litellm._logging import verbose_logger
@@ -47,11 +50,15 @@ _SESSION_MANAGER_TASK = None
 
 if MCP_AVAILABLE:
 <<<<<<< HEAD
+<<<<<<< HEAD
     from mcp.server import Server
 =======
     from mcp.server import NotificationOptions, Server
     from mcp.server.models import InitializationOptions
 >>>>>>> 5b12f3f0b (add simple https server)
+=======
+    from mcp.server import Server
+>>>>>>> 34415bed7 (working mounted app)
     from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
     from mcp.types import EmbeddedResource as MCPEmbeddedResource
     from mcp.types import ImageContent as MCPImageContent
@@ -163,7 +170,7 @@ if MCP_AVAILABLE:
             await shutdown_session_managers()
 =======
     @contextlib.asynccontextmanager
-    async def lifespan(app: Starlette) -> AsyncIterator[None]:
+    async def lifespan(app) -> AsyncIterator[None]:
         """Application lifespan context manager."""
         async with session_manager.run():
             async with sse_session_manager.run():
@@ -337,11 +344,13 @@ if MCP_AVAILABLE:
         """Health check endpoint."""
         return JSONResponse({"status": "healthy", "message": "MCP Server is running"})
 
-    async def handle_mcp(scope: Scope, receive: Receive, send: Send) -> None:
+    async def handle_streamable_http_mcp(
+        scope: Scope, receive: Receive, send: Send
+    ) -> None:
         """Handle MCP requests through StreamableHTTP."""
         await session_manager.handle_request(scope, receive, send)
 
-    async def handle_sse(scope: Scope, receive: Receive, send: Send) -> None:
+    async def handle_sse_mcp(scope: Scope, receive: Receive, send: Send) -> None:
         """Handle MCP requests through SSE."""
         await sse_session_manager.handle_request(scope, receive, send)
 >>>>>>> 5b12f3f0b (add simple https server)
@@ -360,6 +369,7 @@ if MCP_AVAILABLE:
             verbose_logger.exception(f"Error handling MCP request: {e}")
             raise e
 
+<<<<<<< HEAD
     app = FastAPI(
         title=LITELLM_MCP_SERVER_NAME,
         description=LITELLM_MCP_SERVER_DESCRIPTION,
@@ -384,3 +394,45 @@ if MCP_AVAILABLE:
 
 else:
     app = FastAPI()
+=======
+    @router.post("/tools/call", dependencies=[Depends(user_api_key_auth)])
+    async def call_tool_rest_api(
+        request: Request,
+        user_api_key_dict: UserAPIKeyAuth = Depends(user_api_key_auth),
+    ):
+        """
+        REST API to call a specific MCP tool with the provided arguments
+        """
+        from litellm.proxy.proxy_server import add_litellm_data_to_request, proxy_config
+
+        data = await request.json()
+        data = await add_litellm_data_to_request(
+            data=data,
+            request=request,
+            user_api_key_dict=user_api_key_dict,
+            proxy_config=proxy_config,
+        )
+        return await call_mcp_tool(**data)
+
+    app = FastAPI(
+        title="LiteLLM MCP Server",
+        description="MCP Server for LiteLLM",
+        version="1.0.0",
+        debug=True,
+        lifespan=lifespan,
+    )
+
+    # Include the MCP router
+    app.include_router(router)
+
+    # Mount the MCP handlers
+    app.mount("/mcp", handle_streamable_http_mcp)
+    app.mount("/sse", handle_sse_mcp)
+
+    if __name__ == "__main__":
+        # Configure logging
+        import uvicorn
+
+        # Run the server
+        uvicorn.run(app, host="0.0.0.0", port=3000, log_level="info")
+>>>>>>> 34415bed7 (working mounted app)
