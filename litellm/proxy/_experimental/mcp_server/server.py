@@ -473,7 +473,6 @@ else:
         title="LiteLLM MCP Server",
         description="MCP Server for LiteLLM",
         version="1.0.0",
-        debug=True,
         lifespan=lifespan,
     )
 
@@ -483,6 +482,7 @@ else:
     # Mount the MCP handlers
     app.mount("/", handle_streamable_http_mcp)
     app.mount("/sse", handle_sse_mcp)
+<<<<<<< HEAD
 
     if __name__ == "__main__":
         # Configure logging
@@ -491,3 +491,5 @@ else:
         # Run the server
         uvicorn.run(app, host="0.0.0.0", port=3000, log_level="info")
 >>>>>>> 34415bed7 (working mounted app)
+=======
+>>>>>>> b643bcce9 (fix - init just as fastapi app)
