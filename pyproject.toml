@@ -42,6 +42,9 @@ apscheduler = { version = "^3.10.4", optional = true }
 fastapi-sso = { version = "^0.16.0", optional = true }
 PyJWT = { version = "^2.8.0", optional = true }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 43bde936c (build: publish new litellm-proxy-extras file)
 python-multipart = { version = "^0.0.18", optional = true }
 cryptography = { version = "^43.0.1", optional = true }
 prisma = { version = "0.11.0", optional = true }
@@ -50,6 +53,7 @@ azure-keyvault-secrets = { version = "^4.8.0", optional = true }
 google-cloud-kms = { version = "^2.21.3", optional = true }
 resend = { version = "^0.8.0", optional = true }
 pynacl = { version = "^1.5.0", optional = true }
+<<<<<<< HEAD
 websockets = { version = "^13.1.0", optional = true }
 boto3 = { version = "1.37.00", optional = true }
 redisvl = { version = "^0.4.1", optional = true, markers = "python_version >= '3.9' and python_version < '3.14'" }
@@ -75,6 +79,15 @@ litellm-proxy-extras = {version = "0.2.0", optional = true}
 rich = {version = "13.9.4", optional = true}
 litellm-enterprise = {version = "0.1.6", optional = true}
 >>>>>>> 5347e0202 (Revert "Websockets version updated")
+=======
+websockets = { version = "^14.0.0", optional = true }
+boto3 = { version = "1.38.23", optional = true }
+redisvl = { version = "^0.4.1", optional = true, markers = "python_version >= '3.9' and python_version < '3.14'" }
+mcp = { version = "^1.9.3", optional = true, python = ">=3.10" }
+litellm-proxy-extras = { version = "0.2.0", optional = true }
+rich = { version = "13.9.4", optional = true }
+litellm-enterprise = { version = "0.1.6", optional = true }
+>>>>>>> 43bde936c (build: publish new litellm-proxy-extras file)
 
 [tool.poetry.extras]
 proxy = [
@@ -110,8 +123,11 @@ extra_proxy = [
 ]
 
 utils = ["numpydoc"]
+<<<<<<< HEAD
 
 caching = ["diskcache"]
+=======
+>>>>>>> 43bde936c (build: publish new litellm-proxy-extras file)
 
 [tool.isort]
 profile = "black"
@@ -154,7 +170,11 @@ requires = ["poetry-core", "wheel"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.commitizen]
+<<<<<<< HEAD
 version = "1.72.5"
+=======
+version = "1.71.1"
+>>>>>>> 43bde936c (build: publish new litellm-proxy-extras file)
 version_files = ["pyproject.toml:^version"]
 
 [tool.mypy]
