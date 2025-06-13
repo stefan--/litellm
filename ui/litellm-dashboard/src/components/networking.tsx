@@ -5608,4 +5608,40 @@ export const uiAuditLogsCall = async (
     throw error;
   }
 };
+<<<<<<< HEAD
 >>>>>>> 65b28826a (Add uiAuditLogsCall function)
+=======
+
+export const getRemainingUsers = async (accessToken: string): Promise<{
+  total_users: number;
+  total_users_used: number;
+  total_users_remaining: number;
+} | null> => {
+  try {
+    const url = proxyBaseUrl ? `${proxyBaseUrl}/user/available_users` : `/user/available_users`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        [globalLitellmHeaderName]: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      // if 404 - return None
+      if (response.status === 404) {
+        return null;
+      }
+      const errorData = await response.text();
+      handleError(errorData);
+      throw new Error("Network response was not ok");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch remaining users:", error);
+    throw error;
+  }
+};
+>>>>>>> c569056ea (Show remaining users on UI  (#11568))

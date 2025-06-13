@@ -3958,6 +3958,7 @@ def test_vertex_ai_gemini_2_5_pro_streaming():
         print(chunk)
         if chunk.choices[0].delta.content is not None and len(chunk.choices[0].delta.content) > 0:
             has_real_content = True
+<<<<<<< HEAD
     assert has_real_content
 
 
@@ -3995,3 +3996,6 @@ def test_vertex_ai_gemini_audio_ogg():
 
 
 
+=======
+    assert has_real_content
+>>>>>>> 12f2d6c21 (Show remaining users on UI  (#11568))

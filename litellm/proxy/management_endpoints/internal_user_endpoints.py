@@ -228,6 +228,14 @@ async def new_user(
     """
     try:
         from litellm.proxy.proxy_server import _license_check, prisma_client
+<<<<<<< HEAD
+=======
+
+        if prisma_client is None:
+            raise HTTPException(
+                status_code=400, detail=CommonProxyErrors.db_not_connected_error.value
+            )
+>>>>>>> 12f2d6c21 (Show remaining users on UI  (#11568))
 
         if prisma_client is None:
             raise HTTPException(
