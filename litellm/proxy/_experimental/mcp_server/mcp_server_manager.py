@@ -198,8 +198,11 @@ class MCPServerManager:
             verbose_logger.debug(f"Using HTTP streamable transport for {server.url}")
             async with streamablehttp_client(
                 url=server.url,
+<<<<<<< HEAD
                 timeout=timedelta(seconds=60),
 >>>>>>> 88cfcc305 (feat - add https mcp support)
+=======
+>>>>>>> 2fcb16e83 (fixes for MCP http integration)
             ) as (read_stream, write_stream, get_session_id):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
@@ -279,9 +282,12 @@ class MCPServerManager:
             async with streamablehttp_client(
                 url=mcp_server.url,
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
                 timeout=timedelta(seconds=60),
 >>>>>>> 88cfcc305 (feat - add https mcp support)
+=======
+>>>>>>> 2fcb16e83 (fixes for MCP http integration)
             ) as (read_stream, write_stream, get_session_id):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
