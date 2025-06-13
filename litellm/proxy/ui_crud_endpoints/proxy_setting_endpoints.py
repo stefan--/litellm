@@ -314,7 +314,10 @@ async def update_default_team_settings(settings: DefaultTeamSSOParams):
     "/get/sso_settings",
     tags=["SSO Settings"],
     dependencies=[Depends(user_api_key_auth)],
+<<<<<<< HEAD
     response_model=SSOSettingsResponse,
+=======
+>>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
 )
 async def get_sso_settings():
     """
@@ -362,12 +365,20 @@ async def get_sso_settings():
     # Add descriptions to the response
     result = {
         "values": sso_dict,
+<<<<<<< HEAD
         "field_schema": {"description": schema.get("description", ""), "properties": {}},
+=======
+        "schema": {"description": schema.get("description", ""), "properties": {}},
+>>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
     }
     
     # Add property descriptions
     for field_name, field_info in schema["properties"].items():
+<<<<<<< HEAD
         result["field_schema"]["properties"][field_name] = {
+=======
+        result["schema"]["properties"][field_name] = {
+>>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
             "description": field_info.get("description", ""),
             "type": field_info.get("type", "string"),
         }

@@ -5357,6 +5357,7 @@ export const updateGuardrailCall = async (
   }
 };
 
+<<<<<<< HEAD
 export const getSSOSettings = async (accessToken: string) => {
   try {
     // Construct base URL
@@ -5423,6 +5424,9 @@ export const updateSSOSettings = async (accessToken: string, settings: Record<st
   }
 };
 
+=======
+<<<<<<< HEAD
+>>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
 export const uiAuditLogsCall = async (
   accessToken: String,
   start_date?: string,
@@ -5447,6 +5451,17 @@ export const uiAuditLogsCall = async (
       url += `?${queryString}`;
     }
 
+=======
+export const getSSOSettings = async (accessToken: string) => {
+  try {
+    // Construct base URL
+    let url = proxyBaseUrl 
+      ? `${proxyBaseUrl}/get/sso_settings`
+      : `/get/sso_settings`;
+
+    console.log("Fetching SSO configuration from:", url);
+    
+>>>>>>> 9c481e3ba (Add SSO configuration endpoints and UI integration)
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -5462,6 +5477,7 @@ export const uiAuditLogsCall = async (
     }
 
     const data = await response.json();
+<<<<<<< HEAD
     return data;
   } catch (error) {
     console.error("Failed to fetch audit logs:", error);
@@ -5501,3 +5517,46 @@ export const getRemainingUsers = async (accessToken: string): Promise<{
     throw error;
   }
 };
+=======
+    console.log("Fetched SSO configuration:", data);
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch SSO configuration:", error);
+    throw error;
+  }
+};
+
+
+export const updateSSOSettings = async (accessToken: string, settings: Record<string, any>) => {
+  try {
+    // Construct base URL
+    let url = proxyBaseUrl 
+      ? `${proxyBaseUrl}/update/sso_settings`
+      : `/update/sso_settings`;
+
+    console.log("Updating SSO configuration:", settings);
+    
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        [globalLitellmHeaderName]: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(settings),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      handleError(errorData);
+      throw new Error("Network response was not ok");
+    }
+
+    const data = await response.json();
+    console.log("Updated SSO configuration:", data);
+    return data;
+  } catch (error) {
+    console.error("Failed to update SSO configuration:", error);
+    throw error;
+  }
+};
+>>>>>>> 9c481e3ba (Add SSO configuration endpoints and UI integration)

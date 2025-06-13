@@ -223,6 +223,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   const handleShowInstructions = (formValues: Record<string, any>) => {
+<<<<<<< HEAD
+=======
+    console.log("Form submitted with values:", formValues);
+>>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
     setIsAddSSOModalVisible(false);
     setIsInstructionsModalVisible(true);
   };
@@ -577,7 +581,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                 handleInstructionsCancel={handleInstructionsCancel}
                 form={form}
                 accessToken={accessToken}
+<<<<<<< HEAD
                 ssoConfigured={ssoConfigured}
+=======
+>>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
               />
               <Modal
               title="Manage Allowed IP Addresses"

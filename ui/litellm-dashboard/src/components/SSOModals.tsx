@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import React, { useEffect, useState } from "react";
+=======
+import React, { useEffect } from "react";
+>>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
 import { Modal, Form, Input, Button as Button2, Select, message } from "antd";
 import { Text, TextInput } from "@tremor/react";
 import { getSSOSettings, updateSSOSettings } from "./networking";
@@ -13,7 +17,10 @@ interface SSOModalsProps {
   handleInstructionsCancel: () => void;
   form: any; // Replace with proper Form type if available
   accessToken: string | null;
+<<<<<<< HEAD
   ssoConfigured?: boolean; // Add optional prop to indicate if SSO is configured
+=======
+>>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
 }
 
 const ssoProviderLogoMap: Record<string, string> = {
@@ -101,10 +108,14 @@ const SSOModals: React.FC<SSOModalsProps> = ({
   handleInstructionsCancel,
   form,
   accessToken,
+<<<<<<< HEAD
   ssoConfigured = false, // Default to false if not provided
 }) => {
   const [isClearConfirmModalVisible, setIsClearConfirmModalVisible] = useState(false);
 
+=======
+}) => {
+>>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
   // Load existing SSO settings when modal opens
   useEffect(() => {
     const loadSSOSettings = async () => {
@@ -177,6 +188,7 @@ const SSOModals: React.FC<SSOModalsProps> = ({
     }
   };
 
+<<<<<<< HEAD
   // Handle clearing SSO settings
   const handleClearSSO = async () => {
     if (!accessToken) {
@@ -220,6 +232,8 @@ const SSOModals: React.FC<SSOModalsProps> = ({
     }
   };
 
+=======
+>>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
   // Helper function to render provider fields
   const renderProviderFields = (provider: string) => {
     const config = ssoProviderConfigs[provider];
