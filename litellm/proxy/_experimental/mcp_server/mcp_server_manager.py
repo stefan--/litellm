@@ -9,10 +9,12 @@ This is a Proxy
 import asyncio
 import json
 import uuid
+from datetime import timedelta
 from typing import Any, Dict, List, Optional, cast
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
+from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import CallToolResult
 from mcp.types import Tool as MCPTool
 
@@ -181,6 +183,7 @@ class MCPServerManager:
 
                     return tools_result.tools
         elif server.transport == MCPTransport.http:
+<<<<<<< HEAD
             if streamablehttp_client is None:
                 verbose_logger.error(
                     "streamablehttp_client not available - install mcp with HTTP support"
@@ -191,11 +194,21 @@ class MCPServerManager:
             verbose_logger.debug(f"Using HTTP streamable transport for {server.url}")
             async with streamablehttp_client(
                 url=server.url,
+=======
+            verbose_logger.debug(f"Using HTTP streamable transport for {server.url}")
+            async with streamablehttp_client(
+                url=server.url,
+                timeout=timedelta(seconds=60),
+>>>>>>> 88cfcc305 (feat - add https mcp support)
             ) as (read_stream, write_stream, get_session_id):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
 
+<<<<<<< HEAD
                     if get_session_id is not None:
+=======
+                    if get_session_id:
+>>>>>>> 88cfcc305 (feat - add https mcp support)
                         session_id = get_session_id()
                         if session_id:
                             verbose_logger.debug(f"HTTP session ID: {session_id}")
@@ -250,6 +263,7 @@ class MCPServerManager:
                     await session.initialize()
                     return await session.call_tool(name, arguments)
         elif mcp_server.transport == MCPTransport.http:
+<<<<<<< HEAD
             if streamablehttp_client is None:
                 verbose_logger.error(
                     "streamablehttp_client not available - install mcp with HTTP support"
@@ -257,16 +271,26 @@ class MCPServerManager:
                 raise ValueError(
                     "streamablehttp_client not available - please run `pip install mcp -U`"
                 )
+=======
+>>>>>>> 88cfcc305 (feat - add https mcp support)
             verbose_logger.debug(
                 f"Using HTTP streamable transport for tool call: {name}"
             )
             async with streamablehttp_client(
                 url=mcp_server.url,
+<<<<<<< HEAD
+=======
+                timeout=timedelta(seconds=60),
+>>>>>>> 88cfcc305 (feat - add https mcp support)
             ) as (read_stream, write_stream, get_session_id):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
 
+<<<<<<< HEAD
                     if get_session_id is not None:
+=======
+                    if get_session_id:
+>>>>>>> 88cfcc305 (feat - add https mcp support)
                         session_id = get_session_id()
                         if session_id:
                             verbose_logger.debug(
