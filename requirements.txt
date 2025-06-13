@@ -39,6 +39,7 @@ cryptography==43.0.1
 tzdata==2025.1 # IANA time zone database
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 litellm-proxy-extras==0.2.3 # for proxy extras - e.g. prisma migrations
 =======
 litellm-proxy-extras==0.2.1 # for proxy extras - e.g. prisma migrations
@@ -46,6 +47,9 @@ litellm-proxy-extras==0.2.1 # for proxy extras - e.g. prisma migrations
 =======
 litellm-proxy-extras==0.2.2 # for proxy extras - e.g. prisma migrations
 >>>>>>> 5ecbc1123 (bump litellm proxy extras)
+=======
+litellm-proxy-extras==0.2.3 # for proxy extras - e.g. prisma migrations
+>>>>>>> 685b6002b (build: bump poetry)
 ### LITELLM PACKAGE DEPENDENCIES
 python-dotenv==1.0.0 # for env 
 tiktoken==0.8.0 # for calculating usage
