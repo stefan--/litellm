@@ -6,8 +6,16 @@ import asyncio
 import contextlib
 from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
+<<<<<<< HEAD
 from fastapi import FastAPI, HTTPException
 from pydantic import ConfigDict
+=======
+from anyio import BrokenResourceError
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import ConfigDict, ValidationError
+from starlette.applications import Starlette
+>>>>>>> 5b12f3f0b (add simple https server)
 from starlette.types import Receive, Scope, Send
 
 from litellm._logging import verbose_logger
@@ -38,7 +46,12 @@ _SESSION_MANAGERS_INITIALIZED = False
 _SESSION_MANAGER_TASK = None
 
 if MCP_AVAILABLE:
+<<<<<<< HEAD
     from mcp.server import Server
+=======
+    from mcp.server import NotificationOptions, Server
+    from mcp.server.models import InitializationOptions
+>>>>>>> 5b12f3f0b (add simple https server)
     from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
     from mcp.types import EmbeddedResource as MCPEmbeddedResource
     from mcp.types import ImageContent as MCPImageContent
@@ -70,8 +83,13 @@ if MCP_AVAILABLE:
     ############ Initialize the MCP Server #################
     ########################################################
     server: Server = Server(
+<<<<<<< HEAD
         name=LITELLM_MCP_SERVER_NAME,
         version=LITELLM_MCP_SERVER_VERSION,
+=======
+        name="litellm-mcp-server",
+        version="1.0.0",
+>>>>>>> 5b12f3f0b (add simple https server)
     )
     sse: SseServerTransport = SseServerTransport("/mcp/sse/messages")
 
@@ -91,6 +109,7 @@ if MCP_AVAILABLE:
         stateless=True,
     )
 
+<<<<<<< HEAD
     async def initialize_session_managers():
         """Initialize the session managers. Can be called from main app lifespan."""
         global _SESSION_MANAGERS_INITIALIZED, _SESSION_MANAGER_TASK
@@ -142,6 +161,20 @@ if MCP_AVAILABLE:
             yield
         finally:
             await shutdown_session_managers()
+=======
+    @contextlib.asynccontextmanager
+    async def lifespan(app: Starlette) -> AsyncIterator[None]:
+        """Application lifespan context manager."""
+        async with session_manager.run():
+            async with sse_session_manager.run():
+                verbose_logger.info(
+                    "MCP Server started with StreamableHTTP and SSE session managers!"
+                )
+                try:
+                    yield
+                finally:
+                    verbose_logger.info("MCP Server shutting down...")
+>>>>>>> 5b12f3f0b (add simple https server)
 
     ########################################################
     ############### MCP Server Routes #######################
@@ -221,15 +254,15 @@ if MCP_AVAILABLE:
             "litellm_logging_obj", None
         )
         if litellm_logging_obj:
-            litellm_logging_obj.model_call_details[
-                "mcp_tool_call_metadata"
-            ] = standard_logging_mcp_tool_call
-            litellm_logging_obj.model_call_details[
-                "model"
-            ] = f"{MCP_TOOL_NAME_PREFIX}: {standard_logging_mcp_tool_call.get('name') or ''}"
-            litellm_logging_obj.model_call_details[
-                "custom_llm_provider"
-            ] = standard_logging_mcp_tool_call.get("mcp_server_name")
+            litellm_logging_obj.model_call_details["mcp_tool_call_metadata"] = (
+                standard_logging_mcp_tool_call
+            )
+            litellm_logging_obj.model_call_details["model"] = (
+                f"{MCP_TOOL_NAME_PREFIX}: {standard_logging_mcp_tool_call.get('name') or ''}"
+            )
+            litellm_logging_obj.model_call_details["custom_llm_provider"] = (
+                standard_logging_mcp_tool_call.get("mcp_server_name")
+            )
 
         # Try managed server tool first
         if name in global_mcp_server_manager.tool_name_to_mcp_server_name_mapping:
@@ -282,6 +315,7 @@ if MCP_AVAILABLE:
         except Exception as e:
             return [MCPTextContent(text=f"Error: {str(e)}", type="text")]
 
+<<<<<<< HEAD
     async def handle_streamable_http_mcp(
         scope: Scope, receive: Receive, send: Send
     ) -> None:
@@ -297,6 +331,20 @@ if MCP_AVAILABLE:
         except Exception as e:
             verbose_logger.exception(f"Error handling MCP request: {e}")
             raise e
+=======
+    @router.get("/health")
+    async def health_check(request: Request) -> JSONResponse:
+        """Health check endpoint."""
+        return JSONResponse({"status": "healthy", "message": "MCP Server is running"})
+
+    async def handle_mcp(scope: Scope, receive: Receive, send: Send) -> None:
+        """Handle MCP requests through StreamableHTTP."""
+        await session_manager.handle_request(scope, receive, send)
+
+    async def handle_sse(scope: Scope, receive: Receive, send: Send) -> None:
+        """Handle MCP requests through SSE."""
+        await sse_session_manager.handle_request(scope, receive, send)
+>>>>>>> 5b12f3f0b (add simple https server)
 
     async def handle_sse_mcp(scope: Scope, receive: Receive, send: Send) -> None:
         """Handle MCP requests through SSE."""
