@@ -1342,10 +1342,7 @@ class LiteLLM_BudgetTable(LiteLLMPydanticObjectBase):
 class LiteLLM_BudgetTableFull(LiteLLM_BudgetTable):
     """Represents all params for a LiteLLM_BudgetTable record"""
 
-<<<<<<< HEAD
     budget_reset_at: Optional[datetime] = None
-=======
->>>>>>> 12f2d6c21 (Show remaining users on UI  (#11568))
     created_at: datetime
 
 
