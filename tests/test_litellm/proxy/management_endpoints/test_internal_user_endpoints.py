@@ -297,7 +297,6 @@ async def test_new_user_license_over_limit(mocker):
 
     # Verify that the license check was called with the correct user count
     mock_license_check.is_over_limit.assert_called_once_with(total_users=1000)
-<<<<<<< HEAD
 
 
 @pytest.mark.asyncio
@@ -350,5 +349,3 @@ async def test_user_info_url_encoding_plus_character(mocker):
         f"mock_prisma_client.get_data.call_args: {mock_prisma_client.get_data.call_args.kwargs}"
     )
     assert mock_prisma_client.get_data.call_args.kwargs["user_id"] == expected_user_id
-=======
->>>>>>> 12f2d6c21 (Show remaining users on UI  (#11568))

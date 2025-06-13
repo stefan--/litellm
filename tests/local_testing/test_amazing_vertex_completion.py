@@ -1216,7 +1216,7 @@ async def test_gemini_pro_json_schema_httpx_content_policy_error(
         {
             "role": "user",
             "content": """
-    
+
 List 5 popular cookie recipes.
 
 Using this JSON schema:
@@ -1565,12 +1565,12 @@ async def test_anthropic_message_via_anthropic_messages():
         print(f"call_args: {call_args}")
         call_2_kwargs = mock_call.call_args.kwargs
         call_2_kwargs["url"] = call_args[0][0]
-    
+
     """
     Compare Call 1 and Call 2
 
     Expect:
-        - url 
+        - url
         - headers
         - data / json
 
@@ -3794,7 +3794,7 @@ def test_vertex_ai_llama_tool_calling():
     ],
     "vertex_location": "us-east5"
     }
-    try: 
+    try:
         response = completion(**args)
     except litellm.RateLimitError:
         pytest.skip("Rate limit error")
@@ -3958,7 +3958,6 @@ def test_vertex_ai_gemini_2_5_pro_streaming():
         print(chunk)
         if chunk.choices[0].delta.content is not None and len(chunk.choices[0].delta.content) > 0:
             has_real_content = True
-<<<<<<< HEAD
     assert has_real_content
 
 
@@ -3991,11 +3990,3 @@ def test_vertex_ai_gemini_audio_ogg():
         ],
     )
     print(response)
-
-
-
-
-
-=======
-    assert has_real_content
->>>>>>> 12f2d6c21 (Show remaining users on UI  (#11568))

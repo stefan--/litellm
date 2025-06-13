@@ -18,10 +18,10 @@ class IPAddress(BaseModel):
 
 class SettingsResponse(BaseModel):
     """Base response model for settings with values and schema information"""
-    
+
     values: Dict[str, Any]
     """The current configuration values"""
-    
+
     field_schema: Dict[str, Any]
     """Schema information including descriptions and property types for UI display"""
 
@@ -314,10 +314,7 @@ async def update_default_team_settings(settings: DefaultTeamSSOParams):
     "/get/sso_settings",
     tags=["SSO Settings"],
     dependencies=[Depends(user_api_key_auth)],
-<<<<<<< HEAD
     response_model=SSOSettingsResponse,
-=======
->>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
 )
 async def get_sso_settings():
     """
@@ -326,19 +323,19 @@ async def get_sso_settings():
     """
     import os
     from litellm.proxy.proxy_server import proxy_config
-    
+
     # Load existing config to get both environment variables and general settings
     config = await proxy_config.get_config()
     general_settings = config.get("general_settings", {}) or {}
     environment_variables = config.get("environment_variables", {}) or {}
-    
+
     # Get user_email from general_settings
     proxy_admin_email = general_settings.get("proxy_admin_email", None)
-    
+
     # Helper function to get env var value (first from config, then from environment)
     def get_env_value(env_var_name: str):
         return environment_variables.get(env_var_name) or os.getenv(env_var_name)
-    
+
     # Get current environment variables for SSO
     sso_config = SSOConfig(
         google_client_id=get_env_value("GOOGLE_CLIENT_ID"),
@@ -354,35 +351,27 @@ async def get_sso_settings():
         proxy_base_url=get_env_value("PROXY_BASE_URL"),
         user_email=proxy_admin_email,  # Get from config instead of environment
     )
-    
+
     # Get the schema for UI display
     from pydantic import TypeAdapter
     schema = TypeAdapter(SSOConfig).json_schema(by_alias=True)
-    
+
     # Convert to dict for response
     sso_dict = sso_config.model_dump()
-    
+
     # Add descriptions to the response
     result = {
         "values": sso_dict,
-<<<<<<< HEAD
         "field_schema": {"description": schema.get("description", ""), "properties": {}},
-=======
-        "schema": {"description": schema.get("description", ""), "properties": {}},
->>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
     }
-    
+
     # Add property descriptions
     for field_name, field_info in schema["properties"].items():
-<<<<<<< HEAD
         result["field_schema"]["properties"][field_name] = {
-=======
-        result["schema"]["properties"][field_name] = {
->>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
             "description": field_info.get("description", ""),
             "type": field_info.get("type", "string"),
         }
-    
+
     return result
 
 
@@ -397,7 +386,7 @@ async def update_sso_settings(sso_config: SSOConfig):
     """
     from litellm.proxy.proxy_server import proxy_config
     import os
-    
+
     # Update environment variables
     env_var_mapping = {
         'google_client_id': 'GOOGLE_CLIENT_ID',
@@ -412,18 +401,18 @@ async def update_sso_settings(sso_config: SSOConfig):
         'generic_userinfo_endpoint': 'GENERIC_USERINFO_ENDPOINT',
         'proxy_base_url': 'PROXY_BASE_URL',
     }
-    
+
     # Load existing config
     config = await proxy_config.get_config()
-    
+
     # Update config with new environment variables
     if "environment_variables" not in config:
         config["environment_variables"] = {}
-    
+
     # Update general_settings for user_email (admin email)
     if "general_settings" not in config:
         config["general_settings"] = {}
-    
+
     # Update environment variables in config and in memory
     sso_data = sso_config.model_dump(exclude_none=True)
     for field_name, value in sso_data.items():
@@ -436,10 +425,10 @@ async def update_sso_settings(sso_config: SSOConfig):
             config["environment_variables"][env_var_name] = value
             # Update in runtime environment
             os.environ[env_var_name] = value
-    
+
     # Save the updated config
     await proxy_config.save_config(new_config=config)
-    
+
     return {
         "message": "SSO settings updated successfully",
         "status": "success",

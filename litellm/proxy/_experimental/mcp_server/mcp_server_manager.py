@@ -29,15 +29,7 @@ from litellm.proxy._types import (
 try:
     from mcp.client.streamable_http import streamablehttp_client
 except ImportError:
-<<<<<<< HEAD
-<<<<<<< HEAD
     streamablehttp_client = None  # type: ignore
-=======
-    streamablehttp_client = None
->>>>>>> 689a3807f (fix streamablehttp_client)
-=======
-    streamablehttp_client = None  # type: ignore
->>>>>>> 2b8a3ab00 (add streamablehttp_client)
 
 from litellm.types.mcp_server.mcp_server_manager import MCPInfo, MCPServer
 
@@ -189,12 +181,6 @@ class MCPServerManager:
 
                     return tools_result.tools
         elif server.transport == MCPTransport.http:
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 689a3807f (fix streamablehttp_client)
             if streamablehttp_client is None:
                 verbose_logger.error(
                     "streamablehttp_client not available - install mcp with HTTP support"
@@ -202,40 +188,14 @@ class MCPServerManager:
                 raise ValueError(
                     "streamablehttp_client not available - please run `pip install mcp -U`"
                 )
-<<<<<<< HEAD
-=======
-            from mcp.client.streamable_http import streamablehttp_client
-
->>>>>>> 173f7d9d3 (fix import streamablehttp_client)
-=======
->>>>>>> 9c65ed48d (fix streamablehttp_client)
-=======
->>>>>>> 689a3807f (fix streamablehttp_client)
             verbose_logger.debug(f"Using HTTP streamable transport for {server.url}")
             async with streamablehttp_client(
                 url=server.url,
-=======
-            verbose_logger.debug(f"Using HTTP streamable transport for {server.url}")
-            async with streamablehttp_client(
-                url=server.url,
-<<<<<<< HEAD
-                timeout=timedelta(seconds=60),
->>>>>>> 88cfcc305 (feat - add https mcp support)
-=======
->>>>>>> 2fcb16e83 (fixes for MCP http integration)
             ) as (read_stream, write_stream, get_session_id):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
 
-<<<<<<< HEAD
-<<<<<<< HEAD
                     if get_session_id is not None:
-=======
-                    if get_session_id:
->>>>>>> 88cfcc305 (feat - add https mcp support)
-=======
-                    if get_session_id is not None:
->>>>>>> 9f74c34cf (fix linting error)
                         session_id = get_session_id()
                         if session_id:
                             verbose_logger.debug(f"HTTP session ID: {session_id}")
@@ -290,12 +250,6 @@ class MCPServerManager:
                     await session.initialize()
                     return await session.call_tool(name, arguments)
         elif mcp_server.transport == MCPTransport.http:
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 689a3807f (fix streamablehttp_client)
             if streamablehttp_client is None:
                 verbose_logger.error(
                     "streamablehttp_client not available - install mcp with HTTP support"
@@ -303,42 +257,16 @@ class MCPServerManager:
                 raise ValueError(
                     "streamablehttp_client not available - please run `pip install mcp -U`"
                 )
-<<<<<<< HEAD
-=======
->>>>>>> 88cfcc305 (feat - add https mcp support)
-=======
-            from mcp.client.streamable_http import streamablehttp_client
-
->>>>>>> 173f7d9d3 (fix import streamablehttp_client)
-=======
->>>>>>> 9c65ed48d (fix streamablehttp_client)
-=======
->>>>>>> 689a3807f (fix streamablehttp_client)
             verbose_logger.debug(
                 f"Using HTTP streamable transport for tool call: {name}"
             )
             async with streamablehttp_client(
                 url=mcp_server.url,
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                timeout=timedelta(seconds=60),
->>>>>>> 88cfcc305 (feat - add https mcp support)
-=======
->>>>>>> 2fcb16e83 (fixes for MCP http integration)
             ) as (read_stream, write_stream, get_session_id):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
 
-<<<<<<< HEAD
-<<<<<<< HEAD
                     if get_session_id is not None:
-=======
-                    if get_session_id:
->>>>>>> 88cfcc305 (feat - add https mcp support)
-=======
-                    if get_session_id is not None:
->>>>>>> 9f74c34cf (fix linting error)
                         session_id = get_session_id()
                         if session_id:
                             verbose_logger.debug(

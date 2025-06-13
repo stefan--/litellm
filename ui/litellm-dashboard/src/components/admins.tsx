@@ -42,7 +42,7 @@ import { PencilAltIcon } from "@heroicons/react/outline";
 import OnboardingModal from "./onboarding_link";
 import { InvitationLink } from "./onboarding_link";
 import SSOModals from "./SSOModals";
-import { ssoProviderConfigs } from './SSOModals';
+import { ssoProviderConfigs } from "./SSOModals";
 import SCIMConfig from "./SCIM";
 
 interface AdminPanelProps {
@@ -55,7 +55,6 @@ interface AdminPanelProps {
   proxySettings?: any;
 }
 import { useBaseUrl } from "./constants";
-
 
 import {
   userUpdateUserCall,
@@ -109,7 +108,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const isLocal = process.env.NODE_ENV === "development";
   if (isLocal != true) {
-    console.log = function() {};
+    console.log = function () {};
   }
 
   const baseUrl = useBaseUrl();
@@ -124,13 +123,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       try {
         const ssoData = await getSSOSettings(accessToken);
         console.log("SSO data:", ssoData);
-        
+
         // Check if any SSO provider is configured
         if (ssoData && ssoData.values) {
-          const hasGoogleSSO = ssoData.values.google_client_id && ssoData.values.google_client_secret;
-          const hasMicrosoftSSO = ssoData.values.microsoft_client_id && ssoData.values.microsoft_client_secret;
-          const hasGenericSSO = ssoData.values.generic_client_id && ssoData.values.generic_client_secret;
-          
+          const hasGoogleSSO =
+            ssoData.values.google_client_id &&
+            ssoData.values.google_client_secret;
+          const hasMicrosoftSSO =
+            ssoData.values.microsoft_client_id &&
+            ssoData.values.microsoft_client_secret;
+          const hasGenericSSO =
+            ssoData.values.generic_client_id &&
+            ssoData.values.generic_client_secret;
+
           setSsoConfigured(hasGoogleSSO || hasMicrosoftSSO || hasGenericSSO);
         } else {
           setSsoConfigured(false);
@@ -146,13 +151,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     try {
       if (premiumUser !== true) {
         message.error(
-          "This feature is only available for premium users. Please upgrade your account."
-        )
-        return
+          "This feature is only available for premium users. Please upgrade your account.",
+        );
+        return;
       }
       if (accessToken) {
         const data = await getAllowedIPs(accessToken);
-        setAllowedIPs(data && data.length > 0 ? data : [all_ip_address_allowed]);
+        setAllowedIPs(
+          data && data.length > 0 ? data : [all_ip_address_allowed],
+        );
       } else {
         setAllowedIPs([all_ip_address_allowed]);
       }
@@ -166,7 +173,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       }
     }
   };
-  
+
   const handleAddIP = async (values: { ip: string }) => {
     try {
       if (accessToken) {
@@ -174,7 +181,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         // Fetch the updated list of IPs
         const updatedIPs = await getAllowedIPs(accessToken);
         setAllowedIPs(updatedIPs);
-        message.success('IP address added successfully');
+        message.success("IP address added successfully");
       }
     } catch (error) {
       console.error("Error adding IP:", error);
@@ -183,20 +190,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       setIsAddIPModalVisible(false);
     }
   };
-  
+
   const handleDeleteIP = async (ip: string) => {
     setIPToDelete(ip);
     setIsDeleteIPModalVisible(true);
   };
-  
+
   const confirmDeleteIP = async () => {
     if (ipToDelete && accessToken) {
       try {
         await deleteAllowedIP(accessToken, ipToDelete);
         // Fetch the updated list of IPs
         const updatedIPs = await getAllowedIPs(accessToken);
-        setAllowedIPs(updatedIPs.length > 0 ? updatedIPs : [all_ip_address_allowed]);
-        message.success('IP address deleted successfully');
+        setAllowedIPs(
+          updatedIPs.length > 0 ? updatedIPs : [all_ip_address_allowed],
+        );
+        message.success("IP address deleted successfully");
       } catch (error) {
         console.error("Error deleting IP:", error);
         message.error(`Failed to delete IP address ${error}`);
@@ -206,7 +215,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       }
     }
   };
-
 
   const handleAddSSOOk = () => {
     setIsAddSSOModalVisible(false);
@@ -223,10 +231,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   const handleShowInstructions = (formValues: Record<string, any>) => {
-<<<<<<< HEAD
-=======
-    console.log("Form submitted with values:", formValues);
->>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
     setIsAddSSOModalVisible(false);
     setIsInstructionsModalVisible(true);
   };
@@ -264,7 +268,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         const combinedList: any[] = [];
         const response = await userGetAllUsersCall(
           accessToken,
-          "proxy_admin_viewer"
+          "proxy_admin_viewer",
         );
         console.log("proxy admin viewer response: ", response);
         const proxyViewers: User[] = response["users"];
@@ -279,10 +283,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
         console.log(`proxy viewers: ${proxyViewers}`);
 
-        const response2 = await userGetAllUsersCall(
-          accessToken,
-          "proxy_admin"
-        );
+        const response2 = await userGetAllUsersCall(accessToken, "proxy_admin");
 
         const proxyAdmins: User[] = response2["users"];
 
@@ -377,7 +378,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const modifyMemberForm = (
     handleMemberUpdate: HandleMemberCreate,
     currentRole: string,
-    userID: string
+    userID: string,
   ) => {
     return (
       <Form
@@ -428,13 +429,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         const response: any = await userUpdateUserCall(
           accessToken,
           formValues,
-          null
+          null,
         );
         console.log(`response for team create call: ${response}`);
         // Checking if the team exists in the list and updating or adding accordingly
         const foundIndex = admins.findIndex((user) => {
           console.log(
-            `user.user_id=${user.user_id}; response.user_id=${response.user_id}`
+            `user.user_id=${user.user_id}; response.user_id=${response.user_id}`,
           );
           return user.user_id === response.user_id;
         });
@@ -460,7 +461,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         const response: any = await userUpdateUserCall(
           accessToken,
           formValues,
-          "proxy_admin_viewer"
+          "proxy_admin_viewer",
         );
         console.log(`response for team create call: ${response}`);
         // Checking if the team exists in the list and updating or adding accordingly
@@ -474,7 +475,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
         const foundIndex = admins.findIndex((user) => {
           console.log(
-            `user.user_id=${user.user_id}; response.user_id=${response.user_id}`
+            `user.user_id=${user.user_id}; response.user_id=${response.user_id}`,
           );
           return user.user_id === response.user_id;
         });
@@ -504,7 +505,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         const response: any = await userUpdateUserCall(
           accessToken,
           formValues,
-          "proxy_admin"
+          "proxy_admin",
         );
 
         // Give admin an invite link for inviting user to proxy
@@ -517,7 +518,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         // Checking if the team exists in the list and updating or adding accordingly
         const foundIndex = admins.findIndex((user) => {
           console.log(
-            `user.user_id=${user.user_id}; response.user_id=${user_id}`
+            `user.user_id=${user.user_id}; response.user_id=${user_id}`,
           );
           return user.user_id === response.user_id;
         });
@@ -540,7 +541,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   return (
     <div className="w-full m-2 mt-2 p-8">
       <Title level={4}>Admin Access </Title>
-      <Paragraph>Go to &apos;Internal Users&apos; page to add other admins.</Paragraph>
+      <Paragraph>
+        Go to &apos;Internal Users&apos; page to add other admins.
+      </Paragraph>
       <TabGroup>
         <TabList>
           <Tab>Security Settings</Tab>
@@ -550,18 +553,30 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           <TabPanel>
             <Card>
               <Title level={4}> ✨ Security Settings</Title>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem', marginLeft: '0.5rem' }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
+                  marginTop: "1rem",
+                  marginLeft: "0.5rem",
+                }}
+              >
                 <div>
-                  <Button 
-                    style={{ width: '150px' }}
-                    onClick={() => premiumUser === true ? setIsAddSSOModalVisible(true) : message.error("Only premium users can add SSO")}
+                  <Button
+                    style={{ width: "150px" }}
+                    onClick={() =>
+                      premiumUser === true
+                        ? setIsAddSSOModalVisible(true)
+                        : message.error("Only premium users can add SSO")
+                    }
                   >
                     {ssoConfigured ? "Edit SSO Settings" : "Add SSO"}
                   </Button>
                 </div>
                 <div>
-                  <Button 
-                    style={{ width: '150px' }}
+                  <Button
+                    style={{ width: "150px" }}
                     onClick={handleShowAllowedIPs}
                   >
                     Allowed IPs
@@ -569,7 +584,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               </div>
             </Card>
-           
+
             <div className="flex justify-start mb-4">
               <SSOModals
                 isAddSSOModalVisible={isAddSSOModalVisible}
@@ -581,97 +596,116 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                 handleInstructionsCancel={handleInstructionsCancel}
                 form={form}
                 accessToken={accessToken}
-<<<<<<< HEAD
                 ssoConfigured={ssoConfigured}
-=======
->>>>>>> dd5ce1ac7 (Add SSO configuration endpoints and UI integration)
               />
               <Modal
-              title="Manage Allowed IP Addresses"
-              width={800}
-              visible={isAllowedIPModalVisible}
-              onCancel={() => setIsAllowedIPModalVisible(false)}
-              footer={[
-                <Button className="mx-1"key="add" onClick={() => setIsAddIPModalVisible(true)}>
-                  Add IP Address
-                </Button>,
-                <Button key="close" onClick={() => setIsAllowedIPModalVisible(false)}>
-                  Close
-                </Button>
-              ]}
-            >
-              <Table>
-  <TableHead>
-    <TableRow>
-      <TableHeaderCell>IP Address</TableHeaderCell>
-      <TableHeaderCell className="text-right">Action</TableHeaderCell>
-    </TableRow>
-  </TableHead>
-  <TableBody>
-  {allowedIPs.map((ip, index) => (
-  <TableRow key={index}>
-    <TableCell>{ip}</TableCell>
-    <TableCell className="text-right">
-      {ip !== all_ip_address_allowed && (
-        <Button onClick={() => handleDeleteIP(ip)} color="red" size="xs">
-          Delete
-        </Button>
-      )}
-    </TableCell>
-  </TableRow>
-))}
-  </TableBody>
-</Table>
-        </Modal>
+                title="Manage Allowed IP Addresses"
+                width={800}
+                visible={isAllowedIPModalVisible}
+                onCancel={() => setIsAllowedIPModalVisible(false)}
+                footer={[
+                  <Button
+                    className="mx-1"
+                    key="add"
+                    onClick={() => setIsAddIPModalVisible(true)}
+                  >
+                    Add IP Address
+                  </Button>,
+                  <Button
+                    key="close"
+                    onClick={() => setIsAllowedIPModalVisible(false)}
+                  >
+                    Close
+                  </Button>,
+                ]}
+              >
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableHeaderCell>IP Address</TableHeaderCell>
+                      <TableHeaderCell className="text-right">
+                        Action
+                      </TableHeaderCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {allowedIPs.map((ip, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{ip}</TableCell>
+                        <TableCell className="text-right">
+                          {ip !== all_ip_address_allowed && (
+                            <Button
+                              onClick={() => handleDeleteIP(ip)}
+                              color="red"
+                              size="xs"
+                            >
+                              Delete
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Modal>
 
-        <Modal
-          title="Add Allowed IP Address"
-          visible={isAddIPModalVisible}
-          onCancel={() => setIsAddIPModalVisible(false)}
-          footer={null}
-        >
-          <Form onFinish={handleAddIP}>
-            <Form.Item
-              name="ip"
-              rules={[{ required: true, message: 'Please enter an IP address' }]}
-            >
-              <Input placeholder="Enter IP address" />
-            </Form.Item>
-            <Form.Item>
-              <Button2 htmlType="submit">
-                Add IP Address
-              </Button2>
-            </Form.Item>
-          </Form>
-        </Modal>
+              <Modal
+                title="Add Allowed IP Address"
+                visible={isAddIPModalVisible}
+                onCancel={() => setIsAddIPModalVisible(false)}
+                footer={null}
+              >
+                <Form onFinish={handleAddIP}>
+                  <Form.Item
+                    name="ip"
+                    rules={[
+                      { required: true, message: "Please enter an IP address" },
+                    ]}
+                  >
+                    <Input placeholder="Enter IP address" />
+                  </Form.Item>
+                  <Form.Item>
+                    <Button2 htmlType="submit">Add IP Address</Button2>
+                  </Form.Item>
+                </Form>
+              </Modal>
 
-        <Modal
-          title="Confirm Delete"
-          visible={isDeleteIPModalVisible}
-          onCancel={() => setIsDeleteIPModalVisible(false)}
-          onOk={confirmDeleteIP}
-          footer={[
-            <Button className="mx-1"key="delete" onClick={() => confirmDeleteIP()}>
-              Yes
-            </Button>,
-            <Button key="close" onClick={() => setIsDeleteIPModalVisible(false)}>
-              Close
-            </Button>
-          ]}
-        >
-          <p>Are you sure you want to delete the IP address: {ipToDelete}?</p>
-        </Modal>
-        </div>
-        <Callout title="Login without SSO" color="teal">
-          If you need to login without sso, you can access{" "}
-          <a href={nonSssoUrl} target="_blank">
-            <b>{nonSssoUrl}</b>{" "}
-          </a>
-        </Callout>
+              <Modal
+                title="Confirm Delete"
+                visible={isDeleteIPModalVisible}
+                onCancel={() => setIsDeleteIPModalVisible(false)}
+                onOk={confirmDeleteIP}
+                footer={[
+                  <Button
+                    className="mx-1"
+                    key="delete"
+                    onClick={() => confirmDeleteIP()}
+                  >
+                    Yes
+                  </Button>,
+                  <Button
+                    key="close"
+                    onClick={() => setIsDeleteIPModalVisible(false)}
+                  >
+                    Close
+                  </Button>,
+                ]}
+              >
+                <p>
+                  Are you sure you want to delete the IP address: {ipToDelete}?
+                </p>
+              </Modal>
+            </div>
+            <Callout title="Login without SSO" color="teal">
+              If you need to login without sso, you can access{" "}
+              <a href={nonSssoUrl} target="_blank">
+                <b>{nonSssoUrl}</b>{" "}
+              </a>
+            </Callout>
           </TabPanel>
           <TabPanel>
-            <SCIMConfig 
-              accessToken={accessToken} 
+            <SCIMConfig
+              accessToken={accessToken}
               userID={userID}
               proxySettings={proxySettings}
             />
