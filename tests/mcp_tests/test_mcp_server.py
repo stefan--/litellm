@@ -63,6 +63,9 @@ async def test_mcp_server_manager_https_server():
     )
     print("RESULT FROM CALLING TOOL FROM MCP SERVER MANAGER== ", result)
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 73b3615eb (test mcp server https)
 
 
 @pytest.mark.asyncio
@@ -322,6 +325,7 @@ async def test_mcp_http_transport_tool_not_found():
         )
 
 
+<<<<<<< HEAD
 @pytest.mark.asyncio
 async def test_streamable_http_mcp_handler_mock():
     """Test the streamable HTTP MCP handler functionality"""
@@ -378,3 +382,5 @@ async def test_sse_mcp_handler_mock():
 
 =======
 >>>>>>> 95359a6f7 (test_mcp_server_manager_https_server)
+=======
+>>>>>>> 73b3615eb (test mcp server https)
