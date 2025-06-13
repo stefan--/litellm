@@ -62,6 +62,7 @@ async def test_mcp_server_manager_https_server():
         },
     )
     print("RESULT FROM CALLING TOOL FROM MCP SERVER MANAGER== ", result)
+<<<<<<< HEAD
 
 
 @pytest.mark.asyncio
@@ -375,3 +376,5 @@ async def test_sse_mcp_handler_mock():
         )
 
 
+=======
+>>>>>>> 95359a6f7 (test_mcp_server_manager_https_server)
