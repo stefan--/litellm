@@ -1,10 +1,14 @@
 [tool.poetry]
 name = "litellm-proxy-extras"
 <<<<<<< HEAD
+<<<<<<< HEAD
 version = "0.2.3"
 =======
 version = "0.2.1"
 >>>>>>> 43bde936c (build: publish new litellm-proxy-extras file)
+=======
+version = "0.2.2"
+>>>>>>> 5ecbc1123 (bump litellm proxy extras)
 description = "Additional files for the LiteLLM Proxy. Reduces the size of the main litellm package."
 authors = ["BerriAI"]
 readme = "README.md"
@@ -27,10 +31,14 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.commitizen]
 <<<<<<< HEAD
+<<<<<<< HEAD
 version = "0.2.3"
 =======
 version = "0.2.1"
 >>>>>>> 43bde936c (build: publish new litellm-proxy-extras file)
+=======
+version = "0.2.2"
+>>>>>>> 5ecbc1123 (bump litellm proxy extras)
 version_files = [
     "pyproject.toml:version",
     "../requirements.txt:litellm-proxy-extras==",
