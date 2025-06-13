@@ -92,6 +92,7 @@ extra_proxy = [
     "redisvl",
 ]
 utils = ["numpydoc"]
+
 [tool.isort]
 profile = "black"
 
