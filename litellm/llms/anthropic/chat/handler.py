@@ -487,6 +487,9 @@ class ModelResponseIterator:
         self.tool_index = -1
         self.json_mode = json_mode
 
+        # --- PATCH: Track tool call state by contentBlockIndex ---
+        self.tool_call_state = {}  # {index: {"id": ..., "name": ..., "args": "", "in_tool_call": True}}
+
     def check_empty_tool_call_args(self) -> bool:
         """
         Check if the tool call block so far has been an empty string
@@ -536,12 +539,14 @@ class ModelResponseIterator:
         if "text" in content_block["delta"]:
             text = content_block["delta"]["text"]
         elif "partial_json" in content_block["delta"]:
+            # --- PATCH: Accumulate arguments ---
+            self.current_tool_args += content_block["delta"]["partial_json"]
             tool_use = {
-                "id": None,
+                "id": self.current_tool_id,
                 "type": "function",
                 "function": {
-                    "name": None,
-                    "arguments": content_block["delta"]["partial_json"],
+                    "name": self.current_tool_name,
+                    "arguments": self.current_tool_args,
                 },
                 "index": self.tool_index,
             }
@@ -613,7 +618,22 @@ class ModelResponseIterator:
 
     def chunk_parser(self, chunk: dict) -> ModelResponseStream:
         try:
-            type_chunk = chunk.get("type", "") or ""
+            # DEBUG: Log every incoming event and normalized type
+            print(f"[DEBUG] chunk_parser received: {chunk}")
+
+            # Normalize event type for Anthropic/Bedrock streaming
+            if "contentBlockStart" in chunk:
+                type_chunk = "content_block_start"
+                chunk = chunk["contentBlockStart"]
+            elif "contentBlockDelta" in chunk:
+                type_chunk = "content_block_delta"
+                chunk = chunk["contentBlockDelta"]
+            elif "contentBlockStop" in chunk:
+                type_chunk = "content_block_stop"
+                chunk = chunk["contentBlockStop"]
+            else:
+                type_chunk = chunk.get("type", "") or ""
+            print(f"[DEBUG] chunk_parser normalized type: {type_chunk}")
 
             text = ""
             tool_use: Optional[ChatCompletionToolCallChunk] = None
@@ -630,67 +650,62 @@ class ModelResponseIterator:
             ] = None
 
             index = int(chunk.get("index", 0))
-            if type_chunk == "content_block_delta":
-                """
-                Anthropic content chunk
-                chunk = {'type': 'content_block_delta', 'index': 0, 'delta': {'type': 'text_delta', 'text': 'Hello'}}
-                """
-                (
-                    text,
-                    tool_use,
-                    thinking_blocks,
-                    provider_specific_fields,
-                ) = self._content_block_delta_helper(chunk=chunk)
-                if thinking_blocks:
-                    reasoning_content = self._handle_reasoning_content(
-                        thinking_blocks=thinking_blocks
-                    )
-            elif type_chunk == "content_block_start":
-                """
-                event: content_block_start
-                data: {"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_01T1x1fJ34qAmk2tNTrN7Up6","name":"get_weather","input":{}}}
-                """
-
-                content_block_start = self.get_content_block_start(chunk=chunk)
-                self.content_blocks = []  # reset content blocks when new block starts
-                if content_block_start["content_block"]["type"] == "text":
-                    text = content_block_start["content_block"]["text"]
-                elif content_block_start["content_block"]["type"] == "tool_use":
-                    self.tool_index += 1
+            if type_chunk == "content_block_start":
+                # Anthropic/Bedrock: {'contentBlockStart': {'start': {'toolUse': {'toolUseId': '...', 'name': '...'}}, 'contentBlockIndex': ...}}
+                start = chunk.get("start") or chunk.get("contentBlockStart", {}).get("start")
+                idx = chunk.get("contentBlockIndex", index)
+                print(f"[DEBUG] Event: {type_chunk}, Extracted idx: {idx}, Chunk: {chunk}")
+                if start and "toolUse" in start:
+                    tool_use_obj = start["toolUse"]
+                    self.tool_call_state[idx] = {
+                        "id": tool_use_obj.get("toolUseId"),
+                        "name": tool_use_obj.get("name"),
+                        "args": "",
+                        "in_tool_call": True,
+                    }
                     tool_use = {
-                        "id": content_block_start["content_block"]["id"],
+                        "id": self.tool_call_state[idx]["id"],
                         "type": "function",
                         "function": {
-                            "name": content_block_start["content_block"]["name"],
+                            "name": self.tool_call_state[idx]["name"],
                             "arguments": "",
                         },
-                        "index": self.tool_index,
+                        "index": idx,
                     }
-                elif (
-                    content_block_start["content_block"]["type"] == "redacted_thinking"
-                ):
-                    (
-                        thinking_blocks,
-                        provider_specific_fields,
-                    ) = self._handle_redacted_thinking_content(  # type: ignore
-                        content_block_start=content_block_start,
-                        provider_specific_fields=provider_specific_fields,
-                    )
-            elif type_chunk == "content_block_stop":
-                ContentBlockStop(**chunk)  # type: ignore
-                # check if tool call content block
-                is_empty = self.check_empty_tool_call_args()
-
-                if is_empty:
+            elif type_chunk == "content_block_delta":
+                # {'delta': {'toolUse': {'input': '...'}}, 'contentBlockIndex': ...}
+                delta = chunk.get("delta")
+                idx = chunk.get("contentBlockIndex", index)
+                print(f"[DEBUG] Event: {type_chunk}, Extracted idx: {idx}, Chunk: {chunk}")
+                if delta and "toolUse" in delta and idx in self.tool_call_state:
+                    self.tool_call_state[idx]["args"] += delta["toolUse"].get("input", "")
                     tool_use = {
-                        "id": None,
+                        "id": self.tool_call_state[idx]["id"],
                         "type": "function",
                         "function": {
-                            "name": None,
-                            "arguments": "{}",
+                            "name": self.tool_call_state[idx]["name"],
+                            "arguments": self.tool_call_state[idx]["args"],
                         },
-                        "index": self.tool_index,
+                        "index": idx,
                     }
+            elif type_chunk == "content_block_stop":
+                idx = chunk.get("contentBlockIndex", index)
+                print(f"[DEBUG] Event: {type_chunk}, Extracted idx: {idx}, Chunk: {chunk}")
+                state = self.tool_call_state.get(idx)
+                print(f"[DEBUG] content_block_stop: state={state} for idx={idx}")
+                if state and state.get("in_tool_call"):
+                    tool_use = {
+                        "id": state["id"],
+                        "type": "function",
+                        "function": {
+                            "name": state["name"],
+                            "arguments": state["args"],
+                        },
+                        "index": idx,
+                    }
+                    print(f"[DEBUG] Emitting tool call on stop: {tool_use}")
+                    # Clean up
+                    del self.tool_call_state[idx]
             elif type_chunk == "message_delta":
                 """
                 Anthropic
@@ -764,6 +779,33 @@ class ModelResponseIterator:
                 usage=usage,
             )
 
+            # Always emit a chunk with the tool call object on stop, even if content is empty
+            if tool_use:
+                print(f"[DEBUG] Emitting tool call on stop: {tool_use}")
+                # If content is empty but tool_use is set, force emission
+                if not text:
+                    returned_chunk = ModelResponseStream(
+                        choices=[
+                            StreamingChoices(
+                                index=index,
+                                delta=Delta(
+                                    content="",
+                                    tool_calls=[tool_use],
+                                    provider_specific_fields=(
+                                        provider_specific_fields
+                                        if provider_specific_fields
+                                        else None
+                                    ),
+                                    thinking_blocks=(
+                                        thinking_blocks if thinking_blocks else None
+                                    ),
+                                    reasoning_content=reasoning_content,
+                                ),
+                                finish_reason=finish_reason,
+                            )
+                        ],
+                        usage=usage,
+                    )
             return returned_chunk
 
         except json.JSONDecodeError:

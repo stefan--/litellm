@@ -388,6 +388,20 @@ class AmazonInvokeConfig(BaseConfig, BaseAWSLLM):
         )
         setattr(model_response, "usage", usage)
 
+        # DEBUG PRINT: Inspect tool_calls structure before returning
+        try:
+            import json
+            from litellm._logging import verbose_logger
+            tool_calls = getattr(getattr(model_response.choices[0], "message", None), "tool_calls", None)
+            verbose_logger.debug(
+                "[DEBUG] Returning model_response with tool_calls: %s",
+                json.dumps(tool_calls, indent=2, default=str),
+            )
+        except Exception as e:
+            verbose_logger.debug(
+                "[DEBUG] Could not print tool_calls structure: %s", str(e)
+            )
+
         return model_response
 
     def validate_environment(

@@ -2,11 +2,13 @@
 TODO: DELETE FILE. Bedrock LLM is no longer used. Goto `litellm/llms/bedrock/chat/invoke_transformations/base_invoke_transformation.py`
 """
 
+import ast
 import copy
 import json
 import time
 import types
 import urllib.parse
+import re
 import uuid
 from functools import partial
 from typing import (
@@ -1226,6 +1228,11 @@ class AWSEventStreamDecoder:
         self.parser = EventStreamJSONParser()
         self.content_blocks: List[ContentBlockDeltaEvent] = []
         self.tool_calls_index: Optional[int] = None
+        self.buffer = ""
+        self.bracket_stack = []
+        self.in_string = False
+        self.string_char = None
+        self.escaped = False
 
     def check_empty_tool_call_args(self) -> bool:
         """
@@ -1289,7 +1296,7 @@ class AWSEventStreamDecoder:
 
     def converse_chunk_parser(self, chunk_data: dict) -> ModelResponseStream:
         try:
-            verbose_logger.debug("\n\nRaw Chunk: {}\n\n".format(chunk_data))
+            verbose_logger.debug(f"\n\nRaw Chunk: {chunk_data}\n\n")
             text = ""
             tool_use: Optional[ChatCompletionToolCallChunk] = None
             finish_reason = ""
@@ -1305,12 +1312,16 @@ class AWSEventStreamDecoder:
             ] = None
 
             index = int(chunk_data.get("contentBlockIndex", 0))
+
+            # Track tool use state
             if "start" in chunk_data:
+                verbose_logger.debug(f"[Bedrock] contentBlockStart: {chunk_data['start']}")
                 start_obj = ContentBlockStartEvent(**chunk_data["start"])
-                self.content_blocks = []  # reset
+                self.content_blocks = []  # reset for new block
+                self.current_tool_name = None
+                self.current_tool_id = None
                 if start_obj is not None:
                     if "toolUse" in start_obj and start_obj["toolUse"] is not None:
-                        ## check tool name was formatted by litellm
                         _response_tool_name = start_obj["toolUse"]["name"]
                         response_tool_name = get_bedrock_tool_name(
                             response_tool_name=_response_tool_name
@@ -1320,19 +1331,13 @@ class AWSEventStreamDecoder:
                             if self.tool_calls_index is None
                             else self.tool_calls_index + 1
                         )
-                        tool_use = {
-                            "id": start_obj["toolUse"]["toolUseId"],
-                            "type": "function",
-                            "function": {
-                                "name": response_tool_name,
-                                "arguments": "",
-                            },
-                            "index": self.tool_calls_index,
-                        }
+                        self.current_tool_name = response_tool_name
+                        self.current_tool_id = start_obj["toolUse"]["toolUseId"]
+                        verbose_logger.debug(f"[Bedrock] Tool use start: name={self.current_tool_name}, id={self.current_tool_id}")
                     elif (
                         "reasoningContent" in start_obj
                         and start_obj["reasoningContent"] is not None
-                    ):  # redacted thinking can be in start object
+                    ):
                         thinking_blocks = self.translate_thinking_blocks(
                             start_obj["reasoningContent"]
                         )
@@ -1340,22 +1345,14 @@ class AWSEventStreamDecoder:
                             "reasoningContent": start_obj["reasoningContent"],
                         }
             elif "delta" in chunk_data:
+                verbose_logger.debug(f"[Bedrock] contentBlockDelta: {chunk_data['delta']}")
                 delta_obj = ContentBlockDeltaEvent(**chunk_data["delta"])
                 self.content_blocks.append(delta_obj)
                 if "text" in delta_obj:
                     text = delta_obj["text"]
                 elif "toolUse" in delta_obj:
-                    tool_use = {
-                        "id": None,
-                        "type": "function",
-                        "function": {
-                            "name": None,
-                            "arguments": delta_obj["toolUse"]["input"],
-                        },
-                        "index": self.tool_calls_index
-                        if self.tool_calls_index is not None
-                        else index,
-                    }
+                    # Do not construct tool_use here; accumulate input instead
+                    pass
                 elif "reasoningContent" in delta_obj:
                     provider_specific_fields = {
                         "reasoningContent": delta_obj["reasoningContent"],
@@ -1372,20 +1369,33 @@ class AWSEventStreamDecoder:
                         and reasoning_content is None
                     ):
                         reasoning_content = ""  # set to non-empty string to ensure consistency with Anthropic
-            elif (
-                "contentBlockIndex" in chunk_data
-            ):  # stop block, no 'start' or 'delta' object
-                is_empty = self.check_empty_tool_call_args()
-                if is_empty:
-                    tool_use = {
-                        "id": None,
-                        "type": "function",
-                        "function": {
-                            "name": None,
-                            "arguments": "{}",
-                        },
-                        "index": chunk_data["contentBlockIndex"],
-                    }
+            elif "contentBlockStop" in chunk_data or (
+                "contentBlockIndex" in chunk_data and hasattr(self, "current_tool_name") and self.current_tool_name
+            ):
+                # Handle both explicit contentBlockStop and legacy contentBlockIndex
+                verbose_logger.debug(f"[Bedrock] contentBlockStop or contentBlockIndex: {chunk_data}")
+                args = ""
+                for block in self.content_blocks:
+                    if "toolUse" in block:
+                        args += block["toolUse"]["input"]
+                if len(args.strip()) == 0:
+                    args = "{}"
+                tool_use = {
+                    "id": getattr(self, "current_tool_id", None),
+                    "type": "function",
+                    "function": {
+                        "name": self.current_tool_name,
+                        "arguments": args,
+                    },
+                    "index": self.tool_calls_index
+                    if self.tool_calls_index is not None
+                    else index,
+                }
+                verbose_logger.debug(f"[Bedrock] Final constructed tool call: {tool_use}")
+                # Reset tool state after emitting
+                self.current_tool_name = None
+                self.current_tool_id = None
+                self.content_blocks = []
             elif "stopReason" in chunk_data:
                 finish_reason = map_finish_reason(chunk_data.get("stopReason", "stop"))
             elif "usage" in chunk_data:
@@ -1411,16 +1421,32 @@ class AWSEventStreamDecoder:
                             ),
                             thinking_blocks=thinking_blocks,
                             reasoning_content=reasoning_content,
-                        ),
+                        )
                     )
                 ],
                 usage=usage,
                 provider_specific_fields=model_response_provider_specific_fields,
             )
 
+            # DEBUG: Print the chunk structure being emitted to the agent framework
+            import json
+            if tool_use:
+                print("[DEBUG] Emitting chunk to agent framework:", json.dumps({
+                    "choices": [
+                        {
+                            "delta": {
+                                "tool_calls": [tool_use],
+                                "content": text,
+                                "role": "assistant"
+                            }
+                        }
+                    ]
+                }, indent=2))
+
             return response
         except Exception as e:
             raise Exception("Received streaming error - {}".format(str(e)))
+
 
     def _chunk_parser(
         self, chunk_data: dict
@@ -1501,17 +1527,242 @@ class AWSEventStreamDecoder:
     async def aiter_bytes(
         self, iterator: AsyncIterator[bytes]
     ) -> AsyncIterator[Union[GChunk, ModelResponseStream, dict]]:
-        """Given an async iterator that yields lines, iterate over it & yield every event encountered"""
-        from botocore.eventstream import EventStreamBuffer
+        """Given an async iterator that yields lines, iterate over it & yield every event encountered."""
+        from botocore.eventstream import EventStreamBuffer, ChecksumMismatch
 
         event_stream_buffer = EventStreamBuffer()
         async for chunk in iterator:
-            event_stream_buffer.add_data(chunk)
-            for event in event_stream_buffer:
-                message = self._parse_message_from_event(event)
-                if message:
-                    _data = json.loads(message)
-                    yield self._chunk_parser(chunk_data=_data)
+            try:
+                event_stream_buffer.add_data(chunk)
+                for event in event_stream_buffer:
+                    message = self._parse_message_from_event(event)
+                    if message:
+                        _data = json.loads(message)
+                        print(f"[DEBUG] Human-readable data: {_data}")
+                        yield self._chunk_parser(chunk_data=_data)
+            except (ChecksumMismatch, Exception) as e:
+                # Handle fallback parsing with buffering
+                await self._process_chunk_with_buffering(chunk)
+
+                # Yield any complete structures we've parsed
+                while True:
+                    parsed_data = self._try_parse_complete_structure()
+                    if parsed_data is None:
+                        break
+                    try:
+                        print(f"[DEBUG] Human-readable data: {parsed_data}")
+                        yield self._chunk_parser(chunk_data=parsed_data)
+                    except Exception as chunk_error:
+                        print(f"Failed to process chunk: {chunk_error}")
+                        continue
+
+    async def _process_chunk_with_buffering(self, chunk: bytes):
+        """Process a chunk and add to buffer, handling partial structures."""
+        try:
+            chunk_str = chunk.decode('utf-8')
+        except UnicodeDecodeError:
+            print("Failed to decode chunk as UTF-8")
+            return
+
+        # Split by double newlines (common event separator)
+        events = chunk_str.split('\n\n')
+
+        for i, event in enumerate(events):
+            event = event.strip()
+            if not event:
+                continue
+
+            # Remove "data: " prefix if present
+            if event.startswith("data: "):
+                event = event[len("data: "):].strip()
+
+            # If this is the last event and we have more events, it might be incomplete
+            if i == len(events) - 1 and len(events) > 1:
+                self.buffer += event
+            else:
+                # Try to parse this event, or add to buffer if incomplete
+                self._add_to_buffer(event)
+
+    def _add_to_buffer(self, event_str: str):
+        """Add event string to buffer and track structure completeness."""
+        self.buffer += event_str
+
+    def _try_parse_complete_structure(self) -> Optional[dict]:
+        """Try to parse a complete structure from the buffer."""
+        if not self.buffer.strip():
+            return None
+
+        # Find potential complete structures in the buffer
+        complete_structure = self._extract_complete_structure()
+        if complete_structure is None:
+            return None
+
+        # Try to parse the complete structure
+        parsed = self._parse_structure(complete_structure)
+        if parsed is not None:
+            # Remove the parsed structure from buffer
+            self._remove_from_buffer(complete_structure)
+            return parsed
+
+        return None
+
+    def _extract_complete_structure(self) -> Optional[str]:
+        """Extract a complete JSON/dict structure from the buffer."""
+        buffer = self.buffer.strip()
+        if not buffer:
+            return None
+
+        # Try to find complete structures
+        for start_char, end_char in ['{', '}'], ['[', ']']:
+            structure = self._find_balanced_structure(buffer, start_char, end_char)
+            if structure:
+                return structure
+
+        return None
+
+    def _find_balanced_structure(self, text: str, start_char: str, end_char: str) -> Optional[str]:
+        """Find a balanced structure (e.g., matching braces)."""
+        start_idx = text.find(start_char)
+        if start_idx == -1:
+            return None
+
+        stack = []
+        in_string = False
+        string_char = None
+        escaped = False
+
+        for i in range(start_idx, len(text)):
+            char = text[i]
+
+            if escaped:
+                escaped = False
+                continue
+
+            if char == '\\':
+                escaped = True
+                continue
+
+            if not in_string:
+                if char in ['"', "'"]:
+                    in_string = True
+                    string_char = char
+                elif char == start_char:
+                    stack.append(char)
+                elif char == end_char:
+                    if stack:
+                        stack.pop()
+                        if not stack:
+                            # Found complete structure
+                            return text[start_idx:i+1]
+            else:
+                if char == string_char:
+                    in_string = False
+                    string_char = None
+
+        return None
+
+    def _parse_structure(self, structure_str: str) -> Optional[dict]:
+        """Parse a structure string using multiple strategies."""
+        if not structure_str.strip():
+            return None
+
+        # Strategy 1: Detect format and use appropriate parser
+        format_type = self._detect_format(structure_str)
+
+        if format_type == 'json':
+            return self._parse_json(structure_str)
+        elif format_type == 'python_dict':
+            return self._parse_python_dict(structure_str)
+        else:
+            # Try both parsers
+            result = self._parse_json(structure_str)
+            if result is None:
+                result = self._parse_python_dict(structure_str)
+            return result
+
+    def _detect_format(self, structure_str: str) -> str:
+        """Detect if structure is JSON or Python dict format."""
+        # Remove whitespace for analysis
+        clean_str = structure_str.strip()
+
+        # Count quote types
+        double_quotes = clean_str.count('"')
+        single_quotes = clean_str.count("'")
+
+        # JSON typically uses double quotes for strings
+        # Python dicts often use single quotes
+        if double_quotes > single_quotes * 2:
+            return 'json'
+        elif single_quotes > double_quotes * 2:
+            return 'python_dict'
+
+        # Look for other indicators
+        if re.search(r':\s*"[^"]*"', clean_str):  # JSON-style string values
+            return 'json'
+        elif re.search(r":\s*'[^']*'", clean_str):  # Python-style string values
+            return 'python_dict'
+
+        return 'unknown'
+
+    def _parse_json(self, structure_str: str) -> Optional[dict]:
+        """Parse JSON format."""
+        try:
+            return json.loads(structure_str)
+        except json.JSONDecodeError as e:
+            # Try to fix common JSON issues
+            try:
+                # Fix unescaped quotes and other common issues
+                fixed = self._fix_json_issues(structure_str)
+                return json.loads(fixed)
+            except json.JSONDecodeError:
+                return None
+
+    def _parse_python_dict(self, structure_str: str) -> Optional[dict]:
+        """Parse Python dict format."""
+        try:
+            return ast.literal_eval(structure_str)
+        except (ValueError, SyntaxError):
+            # Try to fix common Python dict issues
+            try:
+                fixed = self._fix_python_dict_issues(structure_str)
+                return ast.literal_eval(fixed)
+            except (ValueError, SyntaxError):
+                return None
+
+    def _fix_json_issues(self, json_str: str) -> str:
+        """Fix common JSON formatting issues."""
+        # Replace single quotes with double quotes (but be careful about contractions)
+        # This is a simplified approach - more sophisticated parsing might be needed
+        fixed = json_str.replace("'", '"')
+
+        # Handle other common issues
+        fixed = re.sub(r'([{,]\s*)(\w+):', r'\1"\2":', fixed)  # Unquoted keys
+
+        return fixed
+
+    def _fix_python_dict_issues(self, dict_str: str) -> str:
+        """Fix common Python dict formatting issues."""
+        # Handle incomplete strings
+        if dict_str.count('"') % 2 != 0:
+            dict_str += '"'
+        if dict_str.count("'") % 2 != 0:
+            dict_str += "'"
+
+        # Handle incomplete structures
+        open_braces = dict_str.count('{')
+        close_braces = dict_str.count('}')
+        if open_braces > close_braces:
+            dict_str += '}' * (open_braces - close_braces)
+
+        return dict_str
+
+    def _remove_from_buffer(self, parsed_structure: str):
+        """Remove parsed structure from buffer."""
+        # Find the structure in buffer and remove it
+        idx = self.buffer.find(parsed_structure)
+        if idx != -1:
+            self.buffer = self.buffer[:idx] + self.buffer[idx + len(parsed_structure):]
+            self.buffer = self.buffer.strip()
 
     def _parse_message_from_event(self, event) -> Optional[str]:
         response_dict = event.to_response_dict()
