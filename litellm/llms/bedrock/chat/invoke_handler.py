@@ -1334,6 +1334,43 @@ class AWSEventStreamDecoder:
                         self.current_tool_name = response_tool_name
                         self.current_tool_id = start_obj["toolUse"]["toolUseId"]
                         verbose_logger.debug(f"[Bedrock] Tool use start: name={self.current_tool_name}, id={self.current_tool_id}")
+
+                        # Emit OpenAI-style tool_calls in delta
+                        tool_call = {
+                            "id": self.current_tool_id,
+                            "type": "function",
+                            "function": {
+                                "name": self.current_tool_name,
+                                "arguments": ""  # Arguments will be accumulated in contentBlocks and set at stop
+                            }
+                        }
+                        # Build the OpenAI-style delta
+                        delta = {
+                            "tool_calls": [tool_call]
+                        }
+                        # Return a ModelResponseStream chunk with tool_calls in delta
+                        return ModelResponseStream(
+                            choices=[
+                                StreamingChoices(
+                                    finish_reason=None,
+                                    index=0,
+                                    delta=Delta(
+                                        content=None,
+                                        role="assistant",
+                                        tool_calls=[tool_call],
+                                        provider_specific_fields=None,
+                                        thinking_blocks=None,
+                                        reasoning_content=None,
+                                    )
+                                )
+                            ],
+                            model=None,
+                            object="chat.completion.chunk",
+                            created=int(time.time()),
+                            system_fingerprint=None,
+                            provider_specific_fields=None,
+                            usage=None,
+                        )
                     elif (
                         "reasoningContent" in start_obj
                         and start_obj["reasoningContent"] is not None
