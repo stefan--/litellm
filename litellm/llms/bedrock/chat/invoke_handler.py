@@ -1335,42 +1335,7 @@ class AWSEventStreamDecoder:
                         self.current_tool_id = start_obj["toolUse"]["toolUseId"]
                         verbose_logger.debug(f"[Bedrock] Tool use start: name={self.current_tool_name}, id={self.current_tool_id}")
 
-                        # Emit OpenAI-style tool_calls in delta
-                        tool_call = {
-                            "id": self.current_tool_id,
-                            "type": "function",
-                            "function": {
-                                "name": self.current_tool_name,
-                                "arguments": ""  # Arguments will be accumulated in contentBlocks and set at stop
-                            }
-                        }
-                        # Build the OpenAI-style delta
-                        delta = {
-                            "tool_calls": [tool_call]
-                        }
-                        # Return a ModelResponseStream chunk with tool_calls in delta
-                        return ModelResponseStream(
-                            choices=[
-                                StreamingChoices(
-                                    finish_reason=None,
-                                    index=0,
-                                    delta=Delta(
-                                        content=None,
-                                        role="assistant",
-                                        tool_calls=[tool_call],
-                                        provider_specific_fields=None,
-                                        thinking_blocks=None,
-                                        reasoning_content=None,
-                                    )
-                                )
-                            ],
-                            model=None,
-                            object="chat.completion.chunk",
-                            created=int(time.time()),
-                            system_fingerprint=None,
-                            provider_specific_fields=None,
-                            usage=None,
-                        )
+                        # Do not emit tool_calls chunk at start; wait for contentBlockStop to emit with arguments
                     elif (
                         "reasoningContent" in start_obj
                         and start_obj["reasoningContent"] is not None
@@ -1417,22 +1382,42 @@ class AWSEventStreamDecoder:
                         args += block["toolUse"]["input"]
                 if len(args.strip()) == 0:
                     args = "{}"
-                tool_use = {
+                tool_call = {
                     "id": getattr(self, "current_tool_id", None),
                     "type": "function",
                     "function": {
                         "name": self.current_tool_name,
                         "arguments": args,
-                    },
-                    "index": self.tool_calls_index
-                    if self.tool_calls_index is not None
-                    else index,
+                    }
                 }
-                verbose_logger.debug(f"[Bedrock] Final constructed tool call: {tool_use}")
+                verbose_logger.debug(f"[Bedrock] Final constructed tool call: {tool_call}")
                 # Reset tool state after emitting
                 self.current_tool_name = None
                 self.current_tool_id = None
                 self.content_blocks = []
+                # Emit OpenAI-style tool_calls in delta only at stop event, with arguments
+                return ModelResponseStream(
+                    choices=[
+                        StreamingChoices(
+                            finish_reason=None,
+                            index=index,
+                            delta=Delta(
+                                content=None,
+                                role="assistant",
+                                tool_calls=[tool_call],
+                                provider_specific_fields=None,
+                                thinking_blocks=None,
+                                reasoning_content=None,
+                            )
+                        )
+                    ],
+                    model=None,
+                    object="chat.completion.chunk",
+                    created=int(time.time()),
+                    system_fingerprint=None,
+                    provider_specific_fields=None,
+                    usage=None,
+                )
             elif "stopReason" in chunk_data:
                 finish_reason = map_finish_reason(chunk_data.get("stopReason", "stop"))
             elif "usage" in chunk_data:
