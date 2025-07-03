@@ -1371,11 +1371,9 @@ class AWSEventStreamDecoder:
                         and reasoning_content is None
                     ):
                         reasoning_content = ""  # set to non-empty string to ensure consistency with Anthropic
-            elif "contentBlockStop" in chunk_data or (
-                "contentBlockIndex" in chunk_data and hasattr(self, "current_tool_name") and self.current_tool_name
-            ):
-                # Handle both explicit contentBlockStop and legacy contentBlockIndex
-                verbose_logger.debug(f"[Bedrock] contentBlockStop or contentBlockIndex: {chunk_data}")
+            elif "contentBlockStop" in chunk_data and self.current_tool_name:
+                # Only emit tool_calls chunk at stop for tool use blocks
+                verbose_logger.debug(f"[Bedrock] contentBlockStop for tool use: {chunk_data}")
                 args = ""
                 for block in self.content_blocks:
                     if "toolUse" in block:
@@ -1383,19 +1381,18 @@ class AWSEventStreamDecoder:
                 if len(args.strip()) == 0:
                     args = "{}"
                 tool_call = {
-                    "id": getattr(self, "current_tool_id", None),
+                    "id": self.current_tool_id,
                     "type": "function",
                     "function": {
                         "name": self.current_tool_name,
                         "arguments": args,
                     }
                 }
-                verbose_logger.debug(f"[Bedrock] Final constructed tool call: {tool_call}")
+                verbose_logger.debug(f"[Bedrock] Emitting tool_calls chunk at stop: {tool_call}")
                 # Reset tool state after emitting
                 self.current_tool_name = None
                 self.current_tool_id = None
                 self.content_blocks = []
-                # Emit OpenAI-style tool_calls in delta only at stop event, with arguments
                 return ModelResponseStream(
                     choices=[
                         StreamingChoices(
