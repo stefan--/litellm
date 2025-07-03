@@ -1233,6 +1233,7 @@ class AWSEventStreamDecoder:
         self.in_string = False
         self.string_char = None
         self.escaped = False
+        self.tool_use_state = {}  # key: contentBlockIndex, value: dict with name, id, args
 
     def check_empty_tool_call_args(self) -> bool:
         """
@@ -1313,48 +1314,41 @@ class AWSEventStreamDecoder:
 
             index = int(chunk_data.get("contentBlockIndex", 0))
 
-            # Track tool use state
+            # Track tool use state by contentBlockIndex
             if "start" in chunk_data:
                 verbose_logger.debug(f"[Bedrock] contentBlockStart: {chunk_data['start']}")
                 start_obj = ContentBlockStartEvent(**chunk_data["start"])
                 self.content_blocks = []  # reset for new block
-                self.current_tool_name = None
-                self.current_tool_id = None
-                if start_obj is not None:
-                    if "toolUse" in start_obj and start_obj["toolUse"] is not None:
-                        _response_tool_name = start_obj["toolUse"]["name"]
-                        response_tool_name = get_bedrock_tool_name(
-                            response_tool_name=_response_tool_name
-                        )
-                        self.tool_calls_index = (
-                            0
-                            if self.tool_calls_index is None
-                            else self.tool_calls_index + 1
-                        )
-                        self.current_tool_name = response_tool_name
-                        self.current_tool_id = start_obj["toolUse"]["toolUseId"]
-                        verbose_logger.debug(f"[Bedrock] Tool use start: name={self.current_tool_name}, id={self.current_tool_id}")
-
-                        # Do not emit tool_calls chunk at start; wait for contentBlockStop to emit with arguments
-                    elif (
-                        "reasoningContent" in start_obj
-                        and start_obj["reasoningContent"] is not None
-                    ):
-                        thinking_blocks = self.translate_thinking_blocks(
-                            start_obj["reasoningContent"]
-                        )
-                        provider_specific_fields = {
-                            "reasoningContent": start_obj["reasoningContent"],
-                        }
+                idx = int(chunk_data.get("contentBlockIndex", 0))
+                if start_obj is not None and "toolUse" in start_obj and start_obj["toolUse"] is not None:
+                    tool_use = start_obj["toolUse"]
+                    self.tool_use_state[idx] = {
+                        "name": tool_use["name"],
+                        "id": tool_use["toolUseId"],
+                        "args": ""
+                    }
+                    verbose_logger.debug(f"[Bedrock] Tool use start: name={tool_use['name']}, id={tool_use['toolUseId']}, idx={idx}")
+                elif (
+                    "reasoningContent" in start_obj
+                    and start_obj["reasoningContent"] is not None
+                ):
+                    thinking_blocks = self.translate_thinking_blocks(
+                        start_obj["reasoningContent"]
+                    )
+                    provider_specific_fields = {
+                        "reasoningContent": start_obj["reasoningContent"],
+                    }
             elif "delta" in chunk_data:
                 verbose_logger.debug(f"[Bedrock] contentBlockDelta: {chunk_data['delta']}")
                 delta_obj = ContentBlockDeltaEvent(**chunk_data["delta"])
                 self.content_blocks.append(delta_obj)
+                idx = int(chunk_data.get("contentBlockIndex", 0))
                 if "text" in delta_obj:
                     text = delta_obj["text"]
                 elif "toolUse" in delta_obj:
-                    # Do not construct tool_use here; accumulate input instead
-                    pass
+                    # Accumulate toolUse input for this block index
+                    if idx in self.tool_use_state:
+                        self.tool_use_state[idx]["args"] += delta_obj["toolUse"]["input"]
                 elif "reasoningContent" in delta_obj:
                     provider_specific_fields = {
                         "reasoningContent": delta_obj["reasoningContent"],
@@ -1371,50 +1365,42 @@ class AWSEventStreamDecoder:
                         and reasoning_content is None
                     ):
                         reasoning_content = ""  # set to non-empty string to ensure consistency with Anthropic
-            elif "contentBlockStop" in chunk_data and self.current_tool_name:
-                # Only emit tool_calls chunk at stop for tool use blocks
-                verbose_logger.debug(f"[Bedrock] contentBlockStop for tool use: {chunk_data}")
-                args = ""
-                for block in self.content_blocks:
-                    if "toolUse" in block:
-                        args += block["toolUse"]["input"]
-                if len(args.strip()) == 0:
-                    args = "{}"
-                tool_call = {
-                    "id": self.current_tool_id,
-                    "type": "function",
-                    "function": {
-                        "name": self.current_tool_name,
-                        "arguments": args,
+            elif "contentBlockStop" in chunk_data:
+                idx = int(chunk_data.get("contentBlockIndex", 0))
+                if idx in self.tool_use_state:
+                    tool = self.tool_use_state.pop(idx)
+                    tool_call = {
+                        "id": tool["id"],
+                        "type": "function",
+                        "function": {
+                            "name": tool["name"],
+                            "arguments": tool["args"] or "{}"
+                        }
                     }
-                }
-                verbose_logger.debug(f"[Bedrock] Emitting tool_calls chunk at stop: {tool_call}")
-                # Reset tool state after emitting
-                self.current_tool_name = None
-                self.current_tool_id = None
-                self.content_blocks = []
-                return ModelResponseStream(
-                    choices=[
-                        StreamingChoices(
-                            finish_reason=None,
-                            index=index,
-                            delta=Delta(
-                                content=None,
-                                role="assistant",
-                                tool_calls=[tool_call],
-                                provider_specific_fields=None,
-                                thinking_blocks=None,
-                                reasoning_content=None,
+                    verbose_logger.debug(f"[Bedrock] Emitting tool_calls chunk at stop: {tool_call}")
+                    self.content_blocks = []
+                    return ModelResponseStream(
+                        choices=[
+                            StreamingChoices(
+                                finish_reason=None,
+                                index=idx,
+                                delta=Delta(
+                                    content=None,
+                                    role="assistant",
+                                    tool_calls=[tool_call],
+                                    provider_specific_fields=None,
+                                    thinking_blocks=None,
+                                    reasoning_content=None,
+                                )
                             )
-                        )
-                    ],
-                    model=None,
-                    object="chat.completion.chunk",
-                    created=int(time.time()),
-                    system_fingerprint=None,
-                    provider_specific_fields=None,
-                    usage=None,
-                )
+                        ],
+                        model=None,
+                        object="chat.completion.chunk",
+                        created=int(time.time()),
+                        system_fingerprint=None,
+                        provider_specific_fields=None,
+                        usage=None,
+                    )
             elif "stopReason" in chunk_data:
                 finish_reason = map_finish_reason(chunk_data.get("stopReason", "stop"))
             elif "usage" in chunk_data:
